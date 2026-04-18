@@ -57,9 +57,10 @@ select.filter{background:var(--surface2);border:1px solid var(--border);border-r
     <h1>Marinho Investment Admin</h1>
     <p class="sub">Painel de controle de usuários</p>
     <div class="card">
-      <div class="field"><label>Senha admin</label><input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-      <button class="btn btn-primary" style="width:100%" id="btn-admin-login" type="button" onclick="doAdminLogin()">Entrar</button>
-      <div class="status" id="admin-status"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="admin-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+      <div class="field"><label>Senha</label><input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:.5rem" id="btn-admin-login" type="button" onclick="doAdminLogin()">Entrar</button>
+      <div class="status" id="admin-status" style="min-height:1.2rem"></div>
     </div>
   </div>
 </div>
@@ -126,33 +127,33 @@ select.filter{background:var(--surface2);border:1px solid var(--border);border-r
 
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwIxlD9a-qxh6x9M3aTdmL9ntvpAajcfgTdU1ZzUoyIdT-Zn6bFLJWIE7z0ttlLN9nb/exec';
-const ADMIN_HASH='-1822324';
 const SH='Usuarios';
 
 let allUsers=[];
 
 function hashSimple(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);}
 
-function doAdminLogin(){
+async function doAdminLogin(){
+  var email=document.getElementById('admin-email').value.trim().toLowerCase();
+  var pass=document.getElementById('admin-pass').value.trim();
+  var st=document.getElementById('admin-status');
+  st.textContent='';
+  if(!email||!pass){st.textContent='Preencha e-mail e senha.';return;}
+  st.innerHTML='<span class="spinner"></span> Verificando...';
   try{
-    var pass=document.getElementById('admin-pass').value;
-    var st=document.getElementById('admin-status');
-    st.textContent='';
-    if(pass==='admin123'){
+    var rows=await fetchSheet('Admin');
+    var found=rows.find(function(r){
+      return r[0]&&r[0].toLowerCase()===email&&r[1]&&r[1]===pass;
+    });
+    if(found){
       document.getElementById('login-screen').style.display='none';
       document.getElementById('admin-panel').style.display='block';
       loadUsers();
-      return;
+    } else {
+      st.textContent='E-mail ou senha incorretos.';
     }
-    if(hashSimple(pass)===ADMIN_HASH){
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('admin-panel').style.display='block';
-      loadUsers();
-      return;
-    }
-    st.textContent='Senha incorreta.';
   }catch(err){
-    document.getElementById('admin-status').textContent='Erro: '+err.message;
+    st.textContent='Erro de conexão. Tente novamente.';
   }
 }
 function logout(){document.getElementById('login-screen').style.display='block';document.getElementById('admin-panel').style.display='none';}
