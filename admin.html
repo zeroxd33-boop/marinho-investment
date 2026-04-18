@@ -58,7 +58,7 @@ select.filter{background:var(--surface2);border:1px solid var(--border);border-r
     <p class="sub">Painel de controle de usuários</p>
     <div class="card">
       <div class="field"><label>Senha admin</label><input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="doAdminLogin()">Entrar</button>
+      <button class="btn btn-primary" style="width:100%" id="btn-admin-login" type="button" onclick="doAdminLogin()">Entrar</button>
       <div class="status" id="admin-status"></div>
     </div>
   </div>
@@ -134,15 +134,26 @@ let allUsers=[];
 function hashSimple(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);}
 
 function doAdminLogin(){
-  const passEl=document.getElementById('admin-pass');
-  const pass=passEl?passEl.value.trim():'';
-  const st=document.getElementById('admin-status');
-  if(!pass){st.textContent='Digite a senha.';return;}
-  if(pass==='admin123'||hashSimple(pass)===ADMIN_HASH){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('admin-panel').style.display='block';
-    loadUsers();
-  } else {st.textContent='Senha incorreta.';}
+  try{
+    var pass=document.getElementById('admin-pass').value;
+    var st=document.getElementById('admin-status');
+    st.textContent='';
+    if(pass==='admin123'){
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('admin-panel').style.display='block';
+      loadUsers();
+      return;
+    }
+    if(hashSimple(pass)===ADMIN_HASH){
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('admin-panel').style.display='block';
+      loadUsers();
+      return;
+    }
+    st.textContent='Senha incorreta.';
+  }catch(err){
+    document.getElementById('admin-status').textContent='Erro: '+err.message;
+  }
 }
 function logout(){document.getElementById('login-screen').style.display='block';document.getElementById('admin-panel').style.display='none';}
 
