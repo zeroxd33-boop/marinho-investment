@@ -134,9 +134,11 @@ let allUsers=[];
 function hashSimple(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);}
 
 function doAdminLogin(){
-  const pass=document.getElementById('admin-pass').value;
+  const passEl=document.getElementById('admin-pass');
+  const pass=passEl?passEl.value.trim():'';
   const st=document.getElementById('admin-status');
-  if(hashSimple(pass)===ADMIN_HASH||pass==='admin123'){
+  if(!pass){st.textContent='Digite a senha.';return;}
+  if(pass==='admin123'||hashSimple(pass)===ADMIN_HASH){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('admin-panel').style.display='block';
     loadUsers();
