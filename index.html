@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marinho Investment — Rebalanceamento Inteligente</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;
+  --surface:#12121a;
+  --surface2:#1a1a25;
+  --border:#2a2a3a;
+  --accent:#6c63ff;
+  --accent2:#3ecf8e;
+  --gold:#f0b429;
+  --text:#f0f0f8;
+  --muted:#8888a8;
+  --danger:#ff5c5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(108,99,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(108,99,255,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(ellipse,rgba(108,99,255,.15) 0%,transparent 70%);pointer-events:none}
+.container{max-width:420px;margin:0 auto;padding:2rem 1rem;min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
+.logo{text-align:center;margin-bottom:3rem}
+.logo-icon{font-family:'DM Serif Display',serif;font-size:2.5rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:.7rem;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;margin-top:.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(108,99,255,.5),transparent)}
+.card-title{font-size:1.1rem;font-weight:500;margin-bottom:.25rem}
+.card-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.75rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.4rem;letter-spacing:.05em;text-transform:uppercase}
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;font-size:.9rem;color:var(--text);font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.btn{width:100%;padding:.75rem;border:none;border-radius:8px;font-size:.9rem;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer;transition:all .2s;margin-top:.5rem}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b83ff);color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.status{font-size:.8rem;color:var(--danger);margin-top:.75rem;text-align:center;min-height:1.2rem}
+.status.ok{color:var(--accent2)}
+.disclaimer{margin-top:1.5rem;padding:1rem;background:rgba(240,180,41,.05);border:1px solid rgba(240,180,41,.2);border-radius:8px;font-size:.72rem;color:var(--muted);line-height:1.6}
+.disclaimer strong{color:var(--gold)}
+.tabs-login{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:1.5rem}
+.tab-btn{flex:1;padding:.4rem;border:none;border-radius:6px;font-size:.8rem;font-family:'Outfit',sans-serif;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s}
+.tab-btn.active{background:var(--accent);color:#fff;font-weight:500}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="container">
+  <div class="logo">
+    <div class="logo-icon">Marinho Investment</div>
+    <div class="logo-sub">Rebalanceamento & Análise</div>
+  </div>
+  <div class="card">
+    <div class="tabs-login">
+      <button class="tab-btn active" onclick="setTab('login')">Entrar</button>
+      <button class="tab-btn" onclick="setTab('register')">Criar conta</button>
+    </div>
+    <div id="form-login">
+      <div class="card-title">Bem-vindo de volta</div>
+      <div class="card-sub">Acesse sua carteira personalizada</div>
+      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+      <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+      <div class="status" id="login-status"></div>
+    </div>
+    <div id="form-register" style="display:none">
+      <div class="card-title">Criar conta</div>
+      <div class="card-sub">Acesso liberado pelo administrador</div>
+      <div class="field"><label>Nome completo</label><input type="text" id="reg-nome" placeholder="Seu nome"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn btn-primary" onclick="doRegister()">Solicitar acesso</button>
+      <div class="status" id="reg-status"></div>
+    </div>
+  </div>
+  <div class="disclaimer">
+    <strong>⚠ Aviso importante:</strong> O Marinho Investment é uma ferramenta de <strong>organização e rebalanceamento de carteira</strong>. Não constitui recomendação de investimentos, consultoria financeira ou análise de valores mobiliários nos termos da regulação CVM. Toda decisão de investimento é de responsabilidade exclusiva do usuário. Consulte um profissional habilitado (CNPI) antes de tomar decisões de investimento.
+  </div>
+</div>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIxlD9a-qxh6x9M3aTdmL9ntvpAajcfgTdU1ZzUoyIdT-Zn6bFLJWIE7z0ttlLN9nb/exec';
+const SHEET_USERS = 'Usuarios';
+
+function setTab(t){
+  document.getElementById('form-login').style.display=t==='login'?'block':'none';
+  document.getElementById('form-register').style.display=t==='register'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(t==='login'?0:1)));
+}
+
+async function fetchSheet(sheet){
+  const url=`${SCRIPT_URL}?sheet=${encodeURIComponent(sheet)}`;
+  const r=await fetch(url);
+  return r.json();
+}
+
+async function appendSheet(sheet,values){
+  await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'append',sheet,values})});
+}
+
+function hashSimple(s){
+  let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const st=document.getElementById('login-status');
+  if(!email||!pass){st.textContent='Preencha todos os campos.';return;}
+  st.innerHTML='<span class="spinner"></span>Verificando...';st.className='status';
+  try{
+    const rows=await fetchSheet(SHEET_USERS);
+    const data=Array.isArray(rows)?rows:[];
+    const user=data.find(r=>r[1]&&r[1].toLowerCase()===email&&r[2]===hashSimple(pass));
+    if(!user){st.textContent='E-mail ou senha incorretos.';return;}
+    if(user[4]!=='ATIVO'){st.textContent='Acesso inativo. Contate o administrador.';return;}
+    sessionStorage.setItem('vf_user',JSON.stringify({id:user[0],nome:user[3],email:user[1],plano:user[5]||'BASICO'}));
+    st.className='status ok';st.textContent='Acesso liberado! Redirecionando...';
+    setTimeout(()=>window.location.href='dashboard.html',800);
+  }catch(e){st.textContent='Erro de conexão. Tente novamente.';}
+}
+
+async function doRegister(){
+  const nome=document.getElementById('reg-nome').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass=document.getElementById('reg-pass').value;
+  const st=document.getElementById('reg-status');
+  if(!nome||!email||!pass||pass.length<6){st.textContent='Preencha todos os campos (senha mín. 6 caracteres).';return;}
+  st.innerHTML='<span class="spinner"></span>Enviando solicitação...';st.className='status';
+  try{
+    const rows=await fetchSheet(SHEET_USERS);
+    const data=Array.isArray(rows)?rows:[];
+    if(data.some(r=>r[1]&&r[1].toLowerCase()===email)){st.textContent='E-mail já cadastrado.';return;}
+    const id='U'+Date.now();
+    await appendSheet(SHEET_USERS,[id,email,hashSimple(pass),nome,'PENDENTE','BASICO',new Date().toLocaleDateString('pt-BR')]);
+    st.className='status ok';st.textContent='Solicitação enviada! Aguarde liberação do administrador.';
+  }catch(e){st.textContent='Erro ao enviar. Tente novamente.';}
+}
+</script>
+</body>
+</html>

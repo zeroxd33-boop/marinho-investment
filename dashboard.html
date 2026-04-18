@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marinho Investment — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a25;--surface3:#20202e;
+  --border:#2a2a3a;--border2:#3a3a50;
+  --accent:#6c63ff;--accent2:#3ecf8e;--gold:#f0b429;
+  --text:#f0f0f8;--muted:#8888a8;--muted2:#6060808;
+  --danger:#ff5c5c;--warn:#f0b429;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(108,99,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(108,99,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;position:relative;z-index:1}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:.25rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{padding:1.5rem 2rem;overflow-x:hidden}
+
+/* SIDEBAR */
+.logo-s{font-family:'DM Serif Display',serif;font-size:1.3rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1.5rem;padding:0 .5rem}
+.nav-item{display:flex;align-items:center;gap:.65rem;padding:.55rem .75rem;border-radius:8px;cursor:pointer;font-size:.85rem;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(108,99,255,.15);color:var(--accent);font-weight:500}
+.nav-icon{width:16px;text-align:center;font-size:.9rem}
+.sidebar-bottom{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border)}
+.user-chip{display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;border-radius:8px;background:var(--surface2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:.8rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-plan{font-size:.65rem;color:var(--muted)}
+.btn-logout{width:100%;margin-top:.5rem;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:none;color:var(--muted);font-size:.78rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger)}
+
+/* HEADER */
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.page-title{font-size:1.25rem;font-weight:500}
+.page-sub{font-size:.8rem;color:var(--muted);margin-top:.15rem}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(108,99,255,.3),transparent)}
+.card-title{font-size:.8rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* METRIC GRID */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.metric-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem}
+.metric-val{font-size:1.4rem;font-weight:500;font-family:'DM Mono',monospace}
+.metric-sub{font-size:.7rem;color:var(--muted);margin-top:.2rem}
+.metric-val.green{color:var(--accent2)}
+.metric-val.gold{color:var(--gold)}
+
+/* GRID LAYOUT */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.col-span-2{grid-column:span 2}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{text-align:left;color:var(--muted);font-weight:400;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+td{padding:.6rem .75rem;border-bottom:1px solid rgba(42,42,58,.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:.7rem;padding:3px 8px;border-radius:20px;font-weight:500}
+.badge-buy{background:rgba(62,207,142,.15);color:var(--accent2)}
+.badge-hold{background:rgba(108,99,255,.15);color:#8b83ff}
+.badge-sell{background:rgba(255,92,92,.15);color:var(--danger)}
+.badge-watch{background:rgba(240,180,41,.15);color:var(--gold)}
+.badge-angel{background:rgba(108,99,255,.2);color:var(--accent)}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.field{display:flex;flex-direction:column;gap:.3rem}
+.field label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;font-size:.82rem;color:var(--text);font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field select option{background:var(--surface2)}
+
+/* BTNS */
+.btn{padding:.55rem 1.25rem;border:none;border-radius:8px;font-size:.82rem;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer;transition:all .2s}
+.btn-sm{padding:.35rem .85rem;font-size:.75rem}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#8b83ff);color:#fff}
+.btn-accent:hover{opacity:.9;transform:translateY(-1px)}
+.btn-ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:rgba(255,92,92,.15);color:var(--danger);border:1px solid rgba(255,92,92,.3)}
+
+/* SCORE */
+.score-ring{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-family:'DM Mono',monospace;font-size:2.5rem;font-weight:500}
+.score-label{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+.bar-track{background:var(--surface2);border-radius:4px;height:4px;flex:1;overflow:hidden}
+.bar-fill{height:4px;border-radius:4px;transition:width .5s}
+
+/* CYCLE */
+.cycle-wrap{display:flex;gap:4px;margin:.75rem 0}
+.cycle-item{flex:1;padding:.4rem .2rem;border-radius:6px;text-align:center;font-size:.65rem;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.cycle-item.on{border-color:rgba(255,255,255,.3)}
+
+/* DISCLAIMER */
+.disclaimer-bar{background:rgba(240,180,41,.07);border:1px solid rgba(240,180,41,.2);border-radius:10px;padding:.75rem 1rem;font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:1rem}
+.disclaimer-bar strong{color:var(--gold)}
+
+/* PROGRESS */
+.progress-wrap{margin:.5rem 0}
+.progress-track{background:var(--surface2);border-radius:8px;height:8px;overflow:hidden;margin:.3rem 0}
+.progress-fill{height:8px;border-radius:8px;transition:width .6s}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:1.25rem}
+.tab{flex:1;padding:.4rem;border:none;border-radius:7px;font-size:.78rem;font-family:'Outfit',sans-serif;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s}
+.tab.active{background:var(--accent);color:#fff;font-weight:500}
+
+/* ALERTS */
+.alert{padding:.6rem 1rem;border-radius:8px;font-size:.78rem;margin-bottom:.5rem;display:flex;align-items:flex-start;gap:.5rem}
+.alert-buy{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.25);color:var(--accent2)}
+.alert-sell{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.25);color:var(--danger)}
+.alert-warn{background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.25);color:var(--gold)}
+.alert-info{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);color:#8b83ff}
+
+/* CHART */
+.chart-wrap{position:relative;width:100%}
+
+/* SPINNER */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TABS PAGE */
+.page{display:none}
+.page.active{display:block}
+
+/* MONO */
+.mono{font-family:'DM Mono',monospace}
+
+/* SEPARATOR */
+.sep{border:none;border-top:1px solid var(--border);margin:.75rem 0}
+
+/* MOBILE */
+@media(max-width:768px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .metric-grid{grid-template-columns:1fr 1fr}
+  .grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo-s">Marinho Investment</div>
+  <button class="nav-item active" onclick="navTo('meta')"><span class="nav-icon">◎</span>Meta R$500</button>
+  <button class="nav-item" onclick="navTo('carteira')"><span class="nav-icon">▦</span>Minha Carteira</button>
+  <button class="nav-item" onclick="navTo('analise')"><span class="nav-icon">⬡</span>Análise de Ativos</button>
+  <button class="nav-item" onclick="navTo('ciclos')"><span class="nav-icon">↻</span>Ciclos de Mercado</button>
+  <button class="nav-item" onclick="navTo('simulador')"><span class="nav-icon">⟁</span>Simulador</button>
+  <div class="sidebar-bottom">
+    <div class="user-chip">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div><div class="user-name" id="user-name">Carregando...</div><div class="user-plan" id="user-plan">Plano Básico</div></div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sair da conta</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ===== META ===== -->
+<div class="page active" id="page-meta">
+  <div class="page-header">
+    <div><div class="page-title">Meta de renda passiva</div><div class="page-sub">Quanto falta para R$500/mês</div></div>
+    <button class="btn btn-accent btn-sm" onclick="saveConfig()">Salvar configuração</button>
+  </div>
+  <div class="disclaimer-bar">
+    <strong>⚠ Ferramenta de organização:</strong> O Marinho Investment calcula rebalanceamento com base nos dados inseridos por você. Não constitui recomendação de investimentos. Decisões de compra e venda são de sua exclusiva responsabilidade.
+  </div>
+  <div class="metric-grid" id="meta-metrics"></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Configuração</div>
+      <div class="field" style="margin-bottom:.75rem"><label>Meta mensal (R$)</label><input type="number" id="cfg-meta" value="500" step="50" onchange="recalc()"></div>
+      <div class="field" style="margin-bottom:.75rem"><label>Patrimônio atual (R$)</label><input type="number" id="cfg-pat" value="50000" step="1000" onchange="recalc()"></div>
+      <div class="field" style="margin-bottom:.75rem"><label>Aporte mensal (R$)</label><input type="number" id="cfg-ap" value="1000" step="100" onchange="recalc()"></div>
+      <div class="field"><label>Rentabilidade esperada</label>
+        <select id="cfg-rent" onchange="recalc()">
+          <option value="0.9">0.9% a.m. — Conservador</option>
+          <option value="1.0" selected>1.0% a.m. — Moderado</option>
+          <option value="1.2">1.2% a.m. — Arrojado</option>
+          <option value="1.5">1.5% a.m. — Agressivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Progresso da meta</div>
+      <div id="meta-progress"></div>
+      <hr class="sep">
+      <div class="card-title" style="margin-top:.5rem">Projeção 60 meses</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="chartMeta" role="img" aria-label="Projeção de renda passiva">Projeção de renda passiva.</canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Alertas e recomendações de rebalanceamento</div>
+    <div id="meta-alerts" style="margin-top:.5rem"></div>
+  </div>
+</div>
+
+<!-- ===== CARTEIRA ===== -->
+<div class="page" id="page-carteira">
+  <div class="page-header">
+    <div><div class="page-title">Minha carteira</div><div class="page-sub">Gerencie seus ativos por classe</div></div>
+    <button class="btn btn-accent btn-sm" onclick="openAddAtivo()">+ Adicionar ativo</button>
+  </div>
+  <div class="metric-grid" id="cart-metrics"></div>
+  <div class="grid-2" style="margin-bottom:.75rem">
+    <div class="card">
+      <div class="card-title">Distribuição atual</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="chartPie" role="img" aria-label="Distribuição da carteira">Distribuição da carteira.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sinais de rebalanceamento</div>
+      <div id="sinais-rebalan" style="margin-top:.25rem"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Ativos na carteira</div>
+    <div class="table-wrap" style="margin-top:.75rem">
+      <table id="cart-table">
+        <thead><tr><th>Ativo</th><th>Classe</th><th>Qtd</th><th>PM</th><th>Atual</th><th>Posição</th><th>Resultado</th><th>Score</th><th>Sinal</th><th></th></tr></thead>
+        <tbody id="cart-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Modal add ativo -->
+  <div id="modal-add" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center">
+    <div class="card" style="width:420px;max-width:95vw;border-color:var(--accent);max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="card-title" style="margin:0;font-size:.9rem;color:var(--text)">Adicionar ativo</div>
+        <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem" onclick="closeModal()">✕</button>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Ticker / Nome</label><input type="text" id="add-nome" placeholder="Ex: BBAS3"></div>
+        <div class="field"><label>Classe</label>
+          <select id="add-tipo">
+            <option>Ações BR</option><option>Ações Internac.</option><option>FIIs</option><option>Renda Fixa BR</option><option>Cripto</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Quantidade</label><input type="number" id="add-qtd" value="100" min="0"></div>
+        <div class="field"><label>Preço médio (R$)</label><input type="number" id="add-pm" value="30" step="0.01"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Preço atual (R$)</label><input type="number" id="add-atual" value="32" step="0.01"></div>
+        <div class="field"><label>Dividend Yield (%)</label><input type="number" id="add-dy" value="8" step="0.1"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>P/VP</label><input type="number" id="add-pvp" value="0.9" step="0.1"></div>
+        <div class="field"><label>P/L</label><input type="number" id="add-pl" value="7" step="0.5"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>ROE (%)</label><input type="number" id="add-roe" value="15" step="1"></div>
+        <div class="field"><label>Dívida/EBITDA</label><input type="number" id="add-div" value="2" step="0.5"></div>
+      </div>
+      <div class="field" style="margin-bottom:.75rem"><label>Queda recente (%)</label><input type="number" id="add-queda" value="20" step="5"></div>
+      <button class="btn btn-accent" style="width:100%" onclick="addAtivo()">Adicionar à carteira</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ANÁLISE ===== -->
+<div class="page" id="page-analise">
+  <div class="page-header">
+    <div><div class="page-title">Análise de ativos</div><div class="page-sub">Score Buffett + Fallen Angels + Chance de meta</div></div>
+  </div>
+  <div class="disclaimer-bar">
+    <strong>⚠ Apenas organização e indicadores:</strong> Esta ferramenta calcula scores baseados em dados inseridos por você. <strong>Não é recomendação de compra ou venda.</strong> Nenhum indicador garante retorno. Consulte um analista CNPI antes de investir.
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Dados do ativo</div>
+      <div class="form-row" style="margin-top:.75rem">
+        <div class="field"><label>Ticker</label><input type="text" id="an-nome" placeholder="BBAS3"></div>
+        <div class="field"><label>Classe</label>
+          <select id="an-tipo"><option>Ações BR</option><option>FIIs</option><option>Renda Fixa BR</option><option>Ações Internac.</option><option>Cripto</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>P/VP</label><input type="number" id="an-pvp" value="0.8" step="0.1"></div>
+        <div class="field"><label>P/L</label><input type="number" id="an-pl" value="6" step="0.5"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>DY (%)</label><input type="number" id="an-dy" value="9" step="0.1"></div>
+        <div class="field"><label>ROE (%)</label><input type="number" id="an-roe" value="18" step="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Dívida/EBITDA</label><input type="number" id="an-div" value="1.5" step="0.5"></div>
+        <div class="field"><label>Queda recente (%)</label><input type="number" id="an-queda" value="30" step="5"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Aporte mensal neste ativo (R$)</label><input type="number" id="an-aporte" value="300" step="100"></div>
+        <div class="field"><label>Fase do ciclo</label>
+          <select id="an-ciclo"><option value="expansao">Expansão</option><option value="pico">Pico</option><option value="contracao" selected>Contração</option><option value="recuperacao">Recuperação</option></select>
+        </div>
+      </div>
+      <button class="btn btn-accent" style="width:100%;margin-top:.25rem" onclick="calcAnalise()">Analisar ativo</button>
+    </div>
+    <div class="card" id="analise-result">
+      <div class="card-title">Resultado da análise</div>
+      <div style="color:var(--muted);font-size:.82rem;margin-top:.5rem">Preencha os dados e clique em Analisar.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:.75rem">
+    <div class="card-title">Histórico de análises</div>
+    <div class="table-wrap" style="margin-top:.75rem">
+      <table><thead><tr><th>Ativo</th><th>Score</th><th>Sinal</th><th>Fallen Angel</th><th>Chance meta</th><th>Data</th></tr></thead>
+        <tbody id="analise-hist"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CICLOS ===== -->
+<div class="page" id="page-ciclos">
+  <div class="page-header"><div><div class="page-title">Ciclos de mercado</div><div class="page-sub">Escola Austríaca — Fernando Ulrich</div></div></div>
+  <div class="card" style="margin-bottom:.75rem">
+    <div class="card-title">Fase atual do ciclo</div>
+    <div class="cycle-wrap" id="cycle-bar"></div>
+    <div id="cycle-detail" style="margin-top:1rem"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">O que comprar nesta fase</div>
+      <div id="cycle-buy" style="margin-top:.5rem"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">O que evitar</div>
+      <div id="cycle-avoid" style="margin-top:.5rem"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:.75rem">
+    <div class="card-title">Sinais macroeconômicos desta fase</div>
+    <div id="cycle-sinais" style="margin-top:.5rem"></div>
+  </div>
+</div>
+
+<!-- ===== SIMULADOR ===== -->
+<div class="page" id="page-simulador">
+  <div class="page-header"><div><div class="page-title">Simulador financeiro</div><div class="page-sub">Independência financeira com juros compostos</div></div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Parâmetros</div>
+      <div class="field" style="margin-bottom:.75rem"><label>Patrimônio inicial (R$)</label><input type="number" id="s-pat" value="50000" step="1000" onchange="calcSim()"></div>
+      <div class="field" style="margin-bottom:.75rem"><label>Aporte mensal (R$)</label><input type="number" id="s-ap" value="1000" step="100" onchange="calcSim()"></div>
+      <div class="field" style="margin-bottom:.75rem"><label>Rentabilidade (%/mês)</label><input type="number" id="s-rent" value="1.0" step="0.1" onchange="calcSim()"></div>
+      <div class="field"><label>Renda alvo (R$/mês)</label><input type="number" id="s-renda" value="500" step="100" onchange="calcSim()"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Resultados</div>
+      <div id="sim-results" style="margin-top:.5rem"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:.75rem">
+    <div class="card-title">Curva patrimonial</div>
+    <div class="chart-wrap" style="height:220px;margin-top:.75rem"><canvas id="chartSim" role="img" aria-label="Curva patrimonial">Curva patrimonial.</canvas></div>
+  </div>
+  <div class="card" style="margin-top:.75rem">
+    <div class="card-title">Princípios aplicados nesta simulação</div>
+    <div id="principios" style="margin-top:.5rem"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwIxlD9a-qxh6x9M3aTdmL9ntvpAajcfgTdU1ZzUoyIdT-Zn6bFLJWIE7z0ttlLN9nb/exec';
+const SH_CART='Carteira';
+const SH_CFG='Config';
+
+// ===================== STATE =====================
+let USER=null;
+let carteira=[];
+let analiseHist=[];
+let cfgMeta=500,cfgPat=50000,cfgAp=1000,cfgRent=1.0;
+let cicloAtivo='contracao';
+let chartMeta=null,chartPie=null,chartSim=null;
+
+const CYCLES=[
+  {id:'expansao',label:'Expansão',cor:'#3ecf8e',
+   desc:'Crédito farto, PIB crescendo, juros caindo. Empresas alavancadas se beneficiam. Ciclo favorável para risco.',
+   comprar:['Ações cíclicas','Small caps','FIIs tijolo','Cripto'],evitar:['RF longa','Ouro'],
+   sinais:['Selic em queda','PIB acelerando','Crédito expandindo','Desemprego caindo','Ibovespa em alta']},
+  {id:'pico',label:'Pico / Euforia',cor:'#f0b429',
+   desc:'Euforia generalizada, ativos caros, valuations esticados. Momento de cautela e realização parcial.',
+   comprar:['RF curta','Ouro','Dólar','Ações defensivas'],evitar:['Growth caro','Cripto alavancada','FIIs endividados'],
+   sinais:['Máximas históricas','Todo mundo investindo','P/L médio alto','Manchetes otimistas','Juro real negativo']},
+  {id:'contracao',label:'Contração / Crise',cor:'#ff5c5c',
+   desc:'Selic sobe, crédito caro, PMEs quebrando. Fallen Angels surgem: boas empresas caem por fatores externos.',
+   comprar:['IPCA+','Fallen Angels (P/VP<1)','Dólar','Ouro'],evitar:['Dívida CDI alta','Small caps sem caixa','Cripto especulativa'],
+   sinais:['Selic subindo','Inflação alta','Crédito caro','PMEs quebrando','Ibovespa caindo']},
+  {id:'recuperacao',label:'Recuperação',cor:'#6c63ff',
+   desc:'Juros ainda altos mas cedendo. Melhor janela de entrada em ações baratas antes da expansão.',
+   comprar:['Ações value','Fallen Angels acumulação','FIIs desconto','Small caps lucrativas'],evitar:['RF pós-fixada','Excesso de dólar'],
+   sinais:['Selic estabilizando','Inflação cedendo','Fluxo estrangeiro entrando','Dólar caindo','Ibovespa se recuperando']},
+];
+
+// ===================== INIT =====================
+window.onload=function(){
+  const u=sessionStorage.getItem('vf_user');
+  if(!u){window.location.href='index.html';return;}
+  USER=JSON.parse(u);
+  document.getElementById('user-name').textContent=USER.nome;
+  document.getElementById('user-plan').textContent='Plano '+USER.plano;
+  document.getElementById('user-avatar').textContent=USER.nome.charAt(0).toUpperCase();
+  loadUserData();
+};
+
+// ===================== NAVIGATION =====================
+function navTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')===`navTo('${page}')`){n.classList.add('active');}});
+  if(page==='carteira'){renderCarteira();}
+  if(page==='ciclos'){renderCiclos();}
+  if(page==='simulador'){calcSim();}
+}
+
+function logout(){sessionStorage.clear();window.location.href='index.html';}
+
+// ===================== GOOGLE SHEETS (via Apps Script) =====================
+async function fetchSheet(sheet){
+  try{
+    const url=`${SCRIPT_URL}?sheet=${encodeURIComponent(sheet)}`;
+    const r=await fetch(url);
+    const data=await r.json();
+    return Array.isArray(data)?{values:data}:{values:[]};
+  }catch(e){return {values:[]};}
+}
+async function updateSheet(sheet,values,userId){
+  try{
+    // Busca linha do usuario e atualiza
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'upsert',sheet,userId,values})});
+  }catch(e){}
+}
+async function appendSheet(sheet,values){
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'append',sheet,values})});
+  }catch(e){}
+}
+
+async function loadUserData(){
+  // Carregar config
+  const cfg=await fetchSheet(SH_CFG);
+  const rows=cfg.values||[];
+  const userCfg=rows.find(r=>r[0]===USER.id);
+  if(userCfg){
+    cfgMeta=parseFloat(userCfg[1])||500;cfgPat=parseFloat(userCfg[2])||50000;
+    cfgAp=parseFloat(userCfg[3])||1000;cfgRent=parseFloat(userCfg[4])||1.0;
+    cicloAtivo=userCfg[5]||'contracao';
+    document.getElementById('cfg-meta').value=cfgMeta;
+    document.getElementById('cfg-pat').value=cfgPat;
+    document.getElementById('cfg-ap').value=cfgAp;
+    document.getElementById('cfg-rent').value=cfgRent;
+  }
+  // Carregar carteira
+  const cart=await fetchSheet(SH_CART);
+  const crow=cart.values||[];
+  carteira=crow.filter(r=>r[0]===USER.id).map(r=>({
+    id:r[1],nome:r[2],tipo:r[3],qtd:parseFloat(r[4])||0,pm:parseFloat(r[5])||0,
+    atual:parseFloat(r[6])||0,dy:parseFloat(r[7])||0,pvp:parseFloat(r[8])||1,
+    pl:parseFloat(r[9])||10,roe:parseFloat(r[10])||0,divEbt:parseFloat(r[11])||2,queda:parseFloat(r[12])||0
+  }));
+  recalc();
+  renderCarteira();
+  renderCiclos();
+  calcSim();
+}
+
+async function saveConfig(){
+  await appendSheet(SH_CFG,[USER.id,cfgMeta,cfgPat,cfgAp,cfgRent,cicloAtivo]);
+  showToast('Configuração salva!');
+}
+
+// ===================== UTILS =====================
+function fmt(v){return 'R$ '+Math.round(v).toLocaleString('pt-BR')}
+function fmtD(v,d=2){return v.toFixed(d)}
+function score(a){
+  let s=0;
+  s+=(a.pvp<0.7?25:a.pvp<1?20:a.pvp<1.5?10:a.pvp<2?5:0);
+  s+=(a.pl>0&&a.pl<8?20:a.pl<12?15:a.pl<18?8:a.pl<25?3:0);
+  s+=(a.dy>=10?20:a.dy>=7?15:a.dy>=5?10:a.dy>=3?5:0);
+  s+=(a.roe>=20?15:a.roe>=15?12:a.roe>=10?8:a.roe>=5?4:0);
+  s+=(a.queda>=40?15:a.queda>=25?12:a.queda>=15?7:a.queda>=5?3:0);
+  s+=(a.divEbt<1?5:a.divEbt<2?4:a.divEbt<3?2:a.divEbt<4?1:0);
+  return Math.min(100,s);
+}
+function sinalBadge(s){
+  if(s>=75)return['COMPRAR','badge-buy'];
+  if(s>=55)return['MONITORAR','badge-watch'];
+  if(s>=35)return['AGUARDAR','badge-hold'];
+  return['EVITAR','badge-sell'];
+}
+function isFallenAngel(a){return a.queda>=20&&a.pvp<1.3&&a.dy>=4;}
+function calcMeses(pat,ap,rm,alvo){let p=pat,m=0;while(p<alvo&&m<720){p=p*(1+rm)+ap;m++;}return m;}
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;padding:.6rem 1.2rem;border-radius:8px;font-size:.82rem;z-index:999;animation:fadeIn .2s';
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+
+// ===================== META =====================
+function recalc(){
+  cfgMeta=parseFloat(document.getElementById('cfg-meta').value)||500;
+  cfgPat=parseFloat(document.getElementById('cfg-pat').value)||0;
+  cfgAp=parseFloat(document.getElementById('cfg-ap').value)||0;
+  cfgRent=parseFloat(document.getElementById('cfg-rent').value)||1.0;
+  const rm=cfgRent/100;
+  const rendaAtual=cfgPat*rm;
+  const patNec=cfgMeta/rm;
+  const falta=Math.max(0,patNec-cfgPat);
+  const pct=Math.min(100,Math.round(rendaAtual/cfgMeta*100));
+  const meses=falta>0&&cfgAp>0?calcMeses(cfgPat,cfgAp,rm,patNec):0;
+  // Metrics
+  document.getElementById('meta-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Renda atual</div><div class="metric-val green">${fmt(rendaAtual)}</div><div class="metric-sub">por mês</div></div>
+    <div class="metric-card"><div class="metric-label">Meta mensal</div><div class="metric-val gold">${fmt(cfgMeta)}</div><div class="metric-sub">${pct}% atingido</div></div>
+    <div class="metric-card"><div class="metric-label">Pat. necessário</div><div class="metric-val">${fmt(patNec)}</div><div class="metric-sub">para a meta</div></div>
+    <div class="metric-card"><div class="metric-label">Tempo estimado</div><div class="metric-val">${meses>0?meses+'m':'Atingido'}</div><div class="metric-sub">${meses>0?((meses/12).toFixed(1)+' anos'):''}</div></div>
+  `;
+  // Progress
+  document.getElementById('meta-progress').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:.3rem"><span>${fmt(rendaAtual)}/mês</span><span>${fmt(cfgMeta)}/mês</span></div>
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--accent2)':pct>=70?'var(--gold)':'var(--accent)'}"></div></div>
+    <div style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Falta acumular: ${fmt(falta)}</div>
+    ${meses>0?`<div style="font-size:.72rem;color:var(--muted);margin-top:.2rem">Com ${fmt(cfgAp)}/mês de aporte: meta em <strong style="color:var(--text)">${meses} meses</strong></div>`:''}
+  `;
+  // Alerts
+  let alerts='';
+  const rendaFIIs=carteira.filter(c=>c.tipo==='FIIs').reduce((a,c)=>a+c.qtd*c.atual*c.dy/100/12,0);
+  const rendaRF=carteira.filter(c=>c.tipo==='Renda Fixa BR').reduce((a,c)=>a+(c.qtd*c.atual)*rm,0);
+  if(pct<30)alerts+=`<div class="alert alert-warn">⬡ Ainda longe da meta. Considere aumentar o aporte mensal ou ajustar a alocação em ativos de maior rendimento.</div>`;
+  if(pct>=100)alerts+=`<div class="alert alert-buy">✓ Meta atingida! Renda atual de ${fmt(rendaAtual)}/mês supera a meta de ${fmt(cfgMeta)}/mês. Considere aumentar a meta ou diversificar internacionalmente.</div>`;
+  const totalCart=carteira.reduce((a,c)=>a+c.qtd*c.atual,0);
+  if(totalCart>0&&totalCart<cfgPat*0.5)alerts+=`<div class="alert alert-info">↻ Seu patrimônio na ferramenta (${fmt(totalCart)}) é menor que o configurado (${fmt(cfgPat)}). Atualize sua carteira para análise precisa.</div>`;
+  if(!alerts)alerts=`<div class="alert alert-info">Configuração ok. Atualize os dados da carteira para receber alertas específicos de rebalanceamento.</div>`;
+  document.getElementById('meta-alerts').innerHTML=alerts;
+  renderMetaChart(rm);
+}
+
+function renderMetaChart(rm){
+  const labels=[],data=[],metaLine=[];
+  let p=cfgPat;
+  for(let i=0;i<=60;i++){
+    labels.push(i%12===0?'M'+i:'');
+    data.push(parseFloat((p*rm).toFixed(2)));
+    metaLine.push(cfgMeta);
+    p=p*(1+rm)+cfgAp;
+  }
+  if(chartMeta)chartMeta.destroy();
+  chartMeta=new Chart(document.getElementById('chartMeta'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Renda',data,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.1)',fill:true,tension:.4,pointRadius:0},
+      {label:'Meta',data:metaLine,borderColor:'#3ecf8e',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)+'/mês'}}},
+      scales:{y:{ticks:{color:'#8888a8',callback:v=>'R$'+(v>=1000?(v/1000).toFixed(0)+'k':Math.round(v))},grid:{color:'rgba(255,255,255,.05)'},border:{display:false}},
+        x:{ticks:{color:'#8888a8'},grid:{display:false},border:{display:false}}}}
+  });
+}
+
+// ===================== CARTEIRA =====================
+function renderCarteira(){
+  const total=carteira.reduce((a,c)=>a+c.qtd*c.atual,0);
+  const custo=carteira.reduce((a,c)=>a+c.qtd*c.pm,0);
+  const rm=cfgRent/100;
+  const rendaMensal=carteira.reduce((a,c)=>{
+    const v=c.qtd*c.atual;
+    return a+(c.tipo==='FIIs'?v*c.dy/100/12:c.tipo==='Renda Fixa BR'?v*rm:v*c.dy/100/12);
+  },0);
+  document.getElementById('cart-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Patrimônio total</div><div class="metric-val">${fmt(total)}</div></div>
+    <div class="metric-card"><div class="metric-label">Resultado</div><div class="metric-val ${total>=custo?'green':''}${total<custo?'':''}"> ${total>=custo?'+':''}${fmt(total-custo)}</div><div class="metric-sub">${custo>0?((total/custo-1)*100).toFixed(1):'0'}%</div></div>
+    <div class="metric-card"><div class="metric-label">Renda est./mês</div><div class="metric-val gold">${fmt(rendaMensal)}</div></div>
+    <div class="metric-card"><div class="metric-label">Ativos</div><div class="metric-val">${carteira.length}</div><div class="metric-sub">na carteira</div></div>
+  `;
+  // Tabela
+  const tbody=document.getElementById('cart-tbody');
+  tbody.innerHTML=carteira.map((c,i)=>{
+    const pos=c.qtd*c.atual;const res=(c.atual/c.pm-1)*100;
+    const sc=score(c);const[sig,bc]=sinalBadge(sc);const fa=isFallenAngel(c);
+    return `<tr>
+      <td><strong>${c.nome}</strong>${fa?'<span class="badge badge-angel" style="margin-left:4px">Angel</span>':''}</td>
+      <td><span style="font-size:.72rem;color:var(--muted)">${c.tipo}</span></td>
+      <td class="mono">${c.qtd}</td>
+      <td class="mono">${fmt(c.pm)}</td>
+      <td class="mono">${fmt(c.atual)}</td>
+      <td class="mono">${fmt(pos)}</td>
+      <td class="mono" style="color:${res>=0?'var(--accent2)':'var(--danger)'}">${res>=0?'+':''}${res.toFixed(1)}%</td>
+      <td class="mono">${sc}</td>
+      <td><span class="badge ${bc}">${sig}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeAtivo(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+  // Sinais
+  let sinais='';
+  carteira.forEach(c=>{const sc=score(c);
+    if(sc>=75)sinais+=`<div class="alert alert-buy" style="margin-bottom:.4rem"><strong>${c.nome}</strong> — Score ${sc} — Acumulação gradual indicada pelos indicadores.</div>`;
+    if(sc<35)sinais+=`<div class="alert alert-sell" style="margin-bottom:.4rem"><strong>${c.nome}</strong> — Score ${sc} — Indicadores fracos. Revise a posição.</div>`;
+  });
+  if(!sinais)sinais='<div style="font-size:.8rem;color:var(--muted)">Nenhum sinal extremo. Mantenha a estratégia definida.</div>';
+  document.getElementById('sinais-rebalan').innerHTML=sinais;
+  // Pie
+  renderPie(total);
+}
+
+function renderPie(total){
+  const classes=[...new Set(carteira.map(c=>c.tipo))];
+  const data=classes.map(cl=>carteira.filter(c=>c.tipo===cl).reduce((a,c)=>a+c.qtd*c.atual,0));
+  const colors=['#6c63ff','#3ecf8e','#f0b429','#ff5c5c','#38bdf8'];
+  if(chartPie)chartPie.destroy();
+  chartPie=new Chart(document.getElementById('chartPie'),{
+    type:'doughnut',
+    data:{labels:classes,datasets:[{data,backgroundColor:colors.slice(0,classes.length),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#8888a8',font:{size:11},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.raw)+' ('+((c.raw/Math.max(total,1))*100).toFixed(1)+'%)'}}}}
+  });
+}
+
+function openAddAtivo(){document.getElementById('modal-add').style.display='flex';}
+function closeModal(){document.getElementById('modal-add').style.display='none';}
+
+async function addAtivo(){
+  const a={
+    id:Date.now().toString(),
+    nome:document.getElementById('add-nome').value.toUpperCase()||'ATIVO',
+    tipo:document.getElementById('add-tipo').value,
+    qtd:parseFloat(document.getElementById('add-qtd').value)||0,
+    pm:parseFloat(document.getElementById('add-pm').value)||0,
+    atual:parseFloat(document.getElementById('add-atual').value)||0,
+    dy:parseFloat(document.getElementById('add-dy').value)||0,
+    pvp:parseFloat(document.getElementById('add-pvp').value)||1,
+    pl:parseFloat(document.getElementById('add-pl').value)||10,
+    roe:parseFloat(document.getElementById('add-roe').value)||0,
+    divEbt:parseFloat(document.getElementById('add-div').value)||2,
+    queda:parseFloat(document.getElementById('add-queda').value)||0,
+  };
+  carteira.push(a);
+  await appendSheet(`${SH_CART}!A:N`,[[USER.id,a.id,a.nome,a.tipo,a.qtd,a.pm,a.atual,a.dy,a.pvp,a.pl,a.roe,a.divEbt,a.queda,'']]);
+  closeModal();renderCarteira();showToast(a.nome+' adicionado!');
+}
+
+async function removeAtivo(i){
+  carteira.splice(i,1);
+  await syncCarteira();
+  renderCarteira();showToast('Ativo removido.');
+}
+
+async function syncCarteira(){
+  const rows=[[USER.id,'ID','Nome','Tipo','Qtd','PM','Atual','DY','PVP','PL','ROE','DivEbt','Queda','']];
+  carteira.forEach(a=>rows.push([USER.id,a.id,a.nome,a.tipo,a.qtd,a.pm,a.atual,a.dy,a.pvp,a.pl,a.roe,a.divEbt,a.queda,'']));
+}
+
+// ===================== ANÁLISE =====================
+function calcAnalise(){
+  const nome=document.getElementById('an-nome').value.toUpperCase()||'ATIVO';
+  const tipo=document.getElementById('an-tipo').value;
+  const pvp=parseFloat(document.getElementById('an-pvp').value)||1;
+  const pl=parseFloat(document.getElementById('an-pl').value)||10;
+  const dy=parseFloat(document.getElementById('an-dy').value)||0;
+  const roe=parseFloat(document.getElementById('an-roe').value)||0;
+  const divEbt=parseFloat(document.getElementById('an-div').value)||2;
+  const queda=parseFloat(document.getElementById('an-queda').value)||0;
+  const aporte=parseFloat(document.getElementById('an-aporte').value)||0;
+  const ciclo=document.getElementById('an-ciclo').value;
+  const a={nome,tipo,pvp,pl,dy,roe,divEbt,queda};
+  const sc=score(a);
+  const fa=isFallenAngel(a);
+  const[sig,bc]=sinalBadge(sc);
+
+  // Chance de bater a meta com este ativo
+  const rm=cfgRent/100;
+  const rendaAtualCart=carteira.reduce((a,c)=>a+(c.qtd*c.atual*(c.dy/100/12)),0);
+  const rendaEstimada=rendaAtualCart+(aporte*dy/100/12*12);
+  const chanceMeta=Math.min(100,Math.round(rendaEstimada/cfgMeta*100));
+  const mesesComAporte=aporte>0?calcMeses(cfgPat,aporte,dy/100/12,cfgMeta/(dy/100/12)):0;
+
+  const cicloObj=CYCLES.find(c=>c.id===ciclo);
+  const favoravel=ciclo==='contracao'||ciclo==='recuperacao';
+
+  const pts=[
+    {l:'P/VP '+pvp.toFixed(1),v:pvp<0.7?25:pvp<1?20:pvp<1.5?10:pvp<2?5:0,max:25},
+    {l:'P/L '+pl.toFixed(1),v:pl>0&&pl<8?20:pl<12?15:pl<18?8:pl<25?3:0,max:20},
+    {l:'DY '+dy.toFixed(1)+'%',v:dy>=10?20:dy>=7?15:dy>=5?10:dy>=3?5:0,max:20},
+    {l:'ROE '+roe.toFixed(1)+'%',v:roe>=20?15:roe>=15?12:roe>=10?8:roe>=5?4:0,max:15},
+    {l:'Queda '+queda.toFixed(0)+'%',v:queda>=40?15:queda>=25?12:queda>=15?7:queda>=5?3:0,max:15},
+    {l:'Dívida/EBITDA',v:divEbt<1?5:divEbt<2?4:divEbt<3?2:divEbt<4?1:0,max:5},
+  ];
+
+  const res=document.getElementById('analise-result');
+  res.innerHTML=`
+    <div class="card-title">Resultado — ${nome}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin:.75rem 0">
+      <div style="font-size:2.2rem;font-weight:500;font-family:'DM Mono',monospace">${sc}</div>
+      <div><span class="badge ${bc}" style="font-size:.8rem;padding:4px 12px">${sig}</span>
+        ${fa?'<span class="badge badge-angel" style="margin-left:6px">Fallen Angel</span>':''}
+      </div>
+    </div>
+    ${pts.map(p=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <span style="font-size:.72rem;color:var(--muted);min-width:110px">${p.l}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(p.v/p.max*100)}%;background:var(--accent)"></div></div>
+      <span style="font-size:.72rem;font-family:'DM Mono',monospace;min-width:36px;text-align:right">${p.v}/${p.max}</span>
+    </div>`).join('')}
+    <hr class="sep">
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem"><strong style="color:var(--gold)">Ciclo:</strong> ${cicloObj.label} — ${favoravel?'fase favorável para acumulação de valor':'ciclo menos favorável para compras agressivas'}</div>
+    ${fa?`<div class="alert alert-info" style="margin-bottom:.5rem"><strong>Fallen Angel detectado.</strong> Empresa com queda de ${queda}% e P/VP ${pvp} — queda por fator externo/ciclo, fundamentos preservados. Acumulação gradual pode ser estratégica.</div>`:''}
+    <hr class="sep">
+    <div style="font-size:.75rem;font-weight:500;color:var(--text);margin-bottom:.4rem">Contribuição para a meta</div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Com aporte de ${fmt(aporte)}/mês neste ativo (DY ${dy}%): +${fmt(aporte*dy/100/12)}/mês em renda estimada</div>
+    <div class="progress-track" style="margin-bottom:.4rem"><div class="progress-fill" style="width:${chanceMeta}%;background:${chanceMeta>=80?'var(--accent2)':chanceMeta>=50?'var(--gold)':'var(--accent)'}"></div></div>
+    <div style="font-size:.72rem;color:var(--muted)">${chanceMeta}% de contribuição estimada para a meta de ${fmt(cfgMeta)}/mês</div>
+    ${mesesComAporte>0&&mesesComAporte<720?`<div style="font-size:.72rem;color:var(--muted);margin-top:.3rem">Estimativa: meta em ~${mesesComAporte} meses apenas com este ativo (cenário simplificado)</div>`:''}
+    <hr class="sep">
+    <div class="alert alert-warn" style="font-size:.72rem">⚠ Estes dados são baseados nos indicadores inseridos. Não constituem recomendação de investimento. Consulte um analista CNPI antes de tomar decisões.</div>
+  `;
+
+  // Histórico
+  analiseHist.unshift({nome,sc,sig,bc,fa,chanceMeta,data:new Date().toLocaleDateString('pt-BR')});
+  const tbody=document.getElementById('analise-hist');
+  tbody.innerHTML=analiseHist.slice(0,10).map(h=>`<tr>
+    <td><strong>${h.nome}</strong></td>
+    <td class="mono">${h.sc}</td>
+    <td><span class="badge ${h.bc}">${h.sig}</span></td>
+    <td>${h.fa?'<span class="badge badge-angel">Sim</span>':'<span style="color:var(--muted);font-size:.75rem">Não</span>'}</td>
+    <td class="mono">${h.chanceMeta}%</td>
+    <td style="color:var(--muted);font-size:.75rem">${h.data}</td>
+  </tr>`).join('');
+}
+
+// ===================== CICLOS =====================
+function renderCiclos(){
+  const bar=document.getElementById('cycle-bar');
+  bar.innerHTML=CYCLES.map(c=>`
+    <div class="cycle-item${c.id===cicloAtivo?' on':''}" style="background:${c.id===cicloAtivo?c.cor+'33':c.cor+'11'};color:${c.cor};border-color:${c.id===cicloAtivo?c.cor:'transparent'}"
+      onclick="setCiclo('${c.id}')">${c.label}</div>`).join('');
+  const c=CYCLES.find(x=>x.id===cicloAtivo);
+  document.getElementById('cycle-detail').innerHTML=`<div style="font-size:.82rem;color:var(--muted);line-height:1.7">${c.desc}</div>`;
+  document.getElementById('cycle-buy').innerHTML=c.comprar.map(x=>`<div style="display:flex;align-items:center;gap:6px;padding:.3rem 0;font-size:.8rem;border-bottom:1px solid var(--border)"><span style="color:var(--accent2)">+</span>${x}</div>`).join('');
+  document.getElementById('cycle-avoid').innerHTML=c.evitar.map(x=>`<div style="display:flex;align-items:center;gap:6px;padding:.3rem 0;font-size:.8rem;border-bottom:1px solid var(--border)"><span style="color:var(--danger)">−</span>${x}</div>`).join('');
+  document.getElementById('cycle-sinais').innerHTML=c.sinais.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:.35rem 0;border-bottom:1px solid var(--border)"><span style="width:7px;height:7px;border-radius:50%;background:${c.cor};display:inline-block;flex-shrink:0"></span><span style="font-size:.8rem">${s}</span></div>`).join('');
+}
+function setCiclo(id){cicloAtivo=id;renderCiclos();}
+
+// ===================== SIMULADOR =====================
+function calcSim(){
+  const pat=parseFloat(document.getElementById('s-pat').value)||0;
+  const ap=parseFloat(document.getElementById('s-ap').value)||0;
+  const r=(parseFloat(document.getElementById('s-rent').value)||1)/100;
+  const renda=parseFloat(document.getElementById('s-renda').value)||500;
+  const alvo=renda/r;
+  const meses=calcMeses(pat,ap,r,alvo);
+  const totalAp=pat+ap*meses;
+  const juros=Math.max(0,alvo-totalAp);
+  document.getElementById('sim-results').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="metric-card"><div class="metric-label">Pat. necessário</div><div class="metric-val" style="font-size:1.1rem">${fmt(alvo)}</div></div>
+      <div class="metric-card"><div class="metric-label">Tempo estimado</div><div class="metric-val" style="font-size:1.1rem">${meses>0?meses+'m':'Atingido'}</div><div class="metric-sub">${(meses/12).toFixed(1)} anos</div></div>
+      <div class="metric-card"><div class="metric-label">Total aportado</div><div class="metric-val" style="font-size:1.1rem">${fmt(totalAp)}</div></div>
+      <div class="metric-card"><div class="metric-label">Juros compostos</div><div class="metric-val green" style="font-size:1.1rem">${fmt(juros)}</div></div>
+    </div>
+  `;
+  const labels=[],data=[],metaL=[];let p=pat;
+  const steps=Math.max(meses,12),step=Math.max(1,Math.floor(steps/24));
+  for(let i=0;i<=steps;i+=step){labels.push('M'+i);data.push(Math.round(p));metaL.push(Math.round(alvo));for(let j=0;j<step;j++){p=p*(1+r)+ap;}}
+  if(chartSim)chartSim.destroy();
+  chartSim=new Chart(document.getElementById('chartSim'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Patrimônio',data,borderColor:'#3ecf8e',backgroundColor:'rgba(62,207,142,.08)',fill:true,tension:.4,pointRadius:0},
+      {label:'Meta',data:metaL,borderColor:'#f0b429',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
+      scales:{y:{ticks:{color:'#8888a8',callback:v=>'R$'+(v/1000).toFixed(0)+'k'},grid:{color:'rgba(255,255,255,.05)'},border:{display:false}},x:{ticks:{color:'#8888a8',maxTicksLimit:8},grid:{display:false},border:{display:false}}}}
+  });
+  document.getElementById('principios').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+      <div class="alert alert-info"><strong>Buffett — Regra #1:</strong> Nunca perca dinheiro. Margem de segurança de 30%+ abaixo do valor intrínseco antes de comprar.</div>
+      <div class="alert alert-buy"><strong>Fallen Angel:</strong> Empresas sólidas com queda de 20%+ por fatores externos (crise, ciclo). Acumule gradualmente em contração.</div>
+      <div class="alert alert-warn"><strong>Ciclos Ulrich:</strong> Na contração → IPCA+ e fallen angels. Na recuperação → ações baratas. No pico → realize e vá para defensivos.</div>
+      <div class="alert alert-info"><strong>Juros compostos:</strong> Dos ${fmt(Math.max(0,alvo-pat))} que faltam, ${fmt(juros)} vêm dos juros — não do seu esforço. O tempo trabalha por você.</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
