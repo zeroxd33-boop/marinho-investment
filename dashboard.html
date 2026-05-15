@@ -162,6 +162,11 @@
   .sim-result { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 6px; padding: 1.25rem; margin-top: 1rem; }
   .sim-result p { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; line-height: 1.6; }
   .sim-big { font-family: var(--font-head); font-size: 2rem; color: var(--gold); }
+  .assistant-box {
+    white-space: pre-wrap; line-height: 1.75; font-size: 0.76rem; color: var(--text);
+    border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;
+  }
+  .assistant-box:empty { display: none; }
 
   @media (max-width: 768px) {
     .sidebar { width: 60px; }
@@ -278,6 +283,13 @@
       <p>Score Buffett + Fallen Angel + Ciclo de Mercado</p>
     </div>
     <div class="disclaimer">⚠ Scores são algorítmicos e informativos. Não constituem recomendação de compra ou venda. Avalie com seu assessor.</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-label">Assistente de Carteira</div>
+      <p style="font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;">Análise educativa com IA sobre concentração, renda, valor atual e pontos de atenção da carteira cadastrada.</p>
+      <button class="btn" id="btn-assistente" onclick="analisarComIA()">Analisar com IA</button>
+      <div id="msg-assistente" class="msg"></div>
+      <div id="assistente-resposta" class="assistant-box"></div>
+    </div>
     <div id="analise-lista"><p style="color:var(--muted);font-size:0.75rem;">Adicione ativos na aba Carteira para analisar.</p></div>
   </div>
 
@@ -639,6 +651,55 @@ function renderAnalise() {
       </div>
     </div>`;
   }).join('');
+}
+
+async function analisarComIA() {
+  const msg = document.getElementById('msg-assistente');
+  const resposta = document.getElementById('assistente-resposta');
+  const btn = document.getElementById('btn-assistente');
+
+  resposta.textContent = '';
+  if (!CARTEIRA.length) return showMsg(msg, 'Adicione ativos na carteira antes de usar o assistente.', 'warn');
+
+  setLoading(btn, true, 'Analisando...');
+  try {
+    const payload = {
+      metaRenda: USER.meta_renda || 500,
+      carteira: CARTEIRA.map(a => ({
+        ticker: a.ticker,
+        tipo: a.tipo,
+        setor: a.setor,
+        quantidade: Number(a.quantidade) || 0,
+        preco_medio: Number(a.preco_medio) || 0,
+        cotacao_atual: Number(a.cotacao_atual) || Number(a.preco_medio) || 0,
+        dividendo_mensal: Number(a.dividendo_mensal) || 0
+      }))
+    };
+
+    const res = await fetch('/api/assistente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(() => ({}));
+
+    if (res.status === 401) throw new Error('groq_key_necessaria');
+    if (res.status === 404) throw new Error('rota_assistente_nao_encontrada');
+    if (!res.ok) throw new Error(json?.error || 'falha_assistente');
+
+    resposta.textContent = json.texto || 'Não recebi uma análise da IA. Tente novamente.';
+    showMsg(msg, 'Análise gerada com sucesso.', 'success');
+  } catch (err) {
+    const texto = err.message === 'groq_key_necessaria'
+      ? 'Configure GROQ_API_KEY na Vercel para ativar o Assistente de Carteira.'
+      : err.message === 'rota_assistente_nao_encontrada'
+        ? 'A rota /api/assistente não foi encontrada. Suba api/assistente.js para o GitHub e faça redeploy.'
+        : 'Não foi possível gerar a análise agora. Tente novamente em instantes.';
+    showMsg(msg, texto, 'error');
+    console.error(err);
+  } finally {
+    setLoading(btn, false, 'Analisar com IA');
+  }
 }
 
 function dots(val, max) {
