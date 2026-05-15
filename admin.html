@@ -130,14 +130,17 @@ let sb = null;
 if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 } else {
-  console.error('Configuração do Supabase ausente. Crie config.js localmente ou configure as variáveis na Vercel.');
-  alert('Configuração do Supabase ausente. Configure SUPABASE_URL e SUPABASE_ANON_KEY na Vercel e faça redeploy.');
+  const configMissing = !SUPABASE_URL || !SUPABASE_ANON;
+  alert(configMissing
+    ? 'Configuração do Supabase ausente. Configure SUPABASE_URL e SUPABASE_ANON_KEY na Vercel e faça redeploy.'
+    : 'Biblioteca do Supabase não carregou. Verifique sua conexão com a internet ou se o CDN jsDelivr está bloqueado.'
+  );
 }
-
 let USERS = [], ADMIN_ID = null;
 
 // ── INIT ─────────────────────────────────────────
 (async () => {
+  if (!sb) return;
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return window.location.href = 'index.html';
 

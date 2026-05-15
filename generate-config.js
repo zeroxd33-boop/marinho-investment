@@ -10,7 +10,7 @@ if (!url || !anonKey) {
 }
 
 const config = `window.MARINHO_SUPABASE_CONFIG = ${JSON.stringify({ url, anonKey }, null, 2)};\n`;
-const outputPath = path.join(__dirname, '..', 'config.js');
+const outputPath = path.join(__dirname, 'config.js');
 
 fs.writeFileSync(outputPath, config, 'utf8');
 console.log('Generated config.js for deployment.');
