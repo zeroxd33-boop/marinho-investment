@@ -465,6 +465,7 @@ async function buscarAtivo() {
     const json = await res.json().catch(() => ({}));
     if (res.status === 401) throw new Error('brapi_token_necessario');
     if (res.status === 404) throw new Error('rota_api_nao_encontrada');
+    if (json?.error === 'cotacao_indisponivel') throw new Error('ticker_nao_encontrado');
     if (!res.ok) throw new Error('cotacao_indisponivel');
 
     const ativo = json?.results?.[0];
@@ -493,6 +494,8 @@ async function buscarAtivo() {
       ? 'A brapi exige token para esse ativo. Configure BRAPI_TOKEN na Vercel para liberar a busca de cotações.'
       : err.message === 'rota_api_nao_encontrada'
         ? 'A rota /api/quote não foi encontrada. Faça redeploy na Vercel ou teste usando um ambiente que execute funções de API.'
+      : err.message === 'ticker_nao_encontrado'
+        ? 'A brapi não encontrou cotação para esse ticker. Confira o código do ativo, por exemplo ITSA4 em vez de ITAUSA.'
       : 'Não consegui buscar esse ticker agora. Você ainda pode preencher os dados manualmente.';
     showMsg(msg, texto, 'warn');
     console.error(err);
