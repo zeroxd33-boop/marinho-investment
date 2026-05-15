@@ -685,7 +685,7 @@ async function analisarComIA() {
 
     if (res.status === 401) throw new Error('groq_key_necessaria');
     if (res.status === 404) throw new Error('rota_assistente_nao_encontrada');
-    if (!res.ok) throw new Error(json?.error || 'falha_assistente');
+    if (!res.ok) throw new Error(json?.message || json?.error || 'falha_assistente');
 
     resposta.textContent = json.texto || 'Não recebi uma análise da IA. Tente novamente.';
     showMsg(msg, 'Análise gerada com sucesso.', 'success');
@@ -694,7 +694,7 @@ async function analisarComIA() {
       ? 'Configure GROQ_API_KEY na Vercel para ativar o Assistente de Carteira.'
       : err.message === 'rota_assistente_nao_encontrada'
         ? 'A rota /api/assistente não foi encontrada. Suba api/assistente.js para o GitHub e faça redeploy.'
-        : 'Não foi possível gerar a análise agora. Tente novamente em instantes.';
+        : `Não foi possível gerar a análise agora. ${err.message || 'Tente novamente em instantes.'}`;
     showMsg(msg, texto, 'error');
     console.error(err);
   } finally {
