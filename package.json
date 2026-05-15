@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "build": "node scripts/generate-config.js"
+    "build": "node generate-config.js"
   }
 }
