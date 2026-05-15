@@ -402,7 +402,6 @@ if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
 }
 let USER = null, CARTEIRA = [], CICLO_ATUAL = 'recuperacao';
 let ATIVO_BUSCADO = null;
-const BRAPI_TOKEN = window.MARINHO_MARKET_CONFIG?.brapiToken || '';
 
 // ── INIT ─────────────────────────────────────────
 (async () => {
@@ -449,7 +448,7 @@ function renderTabela() {
 
 async function buscarAtivo() {
   const tickerInput = document.getElementById('f-ticker');
-  const ticker = tickerInput.value.trim().toUpperCase();
+  const ticker = tickerInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   const msg = document.getElementById('msg-carteira');
   const btn = document.getElementById('btn-buscar-ativo');
   const preview = document.getElementById('ativo-preview');
@@ -462,13 +461,11 @@ async function buscarAtivo() {
 
   setLoading(btn, true, 'Buscando...');
   try {
-    const params = new URLSearchParams({ range: '1d', interval: '1d', fundamental: 'true' });
-    if (BRAPI_TOKEN) params.set('token', BRAPI_TOKEN);
-
-    const res = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(ticker)}?${params.toString()}`);
+    const res = await fetch(`/api/quote?ticker=${encodeURIComponent(ticker)}`);
+    const json = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('brapi_token_necessario');
     if (!res.ok) throw new Error('cotacao_indisponivel');
 
-    const json = await res.json();
     const ativo = json?.results?.[0];
     if (!ativo) throw new Error('ativo_nao_encontrado');
 
@@ -491,7 +488,10 @@ async function buscarAtivo() {
     preview.classList.add('open');
     showMsg(msg, 'Dados carregados. Confira a cotação antes de adicionar as cotas.', 'success');
   } catch (err) {
-    showMsg(msg, 'Não consegui buscar esse ticker agora. Você ainda pode preencher os dados manualmente.', 'warn');
+    const texto = err.message === 'brapi_token_necessario'
+      ? 'A brapi exige token para esse ativo. Configure BRAPI_TOKEN na Vercel para liberar a busca de cotações.'
+      : 'Não consegui buscar esse ticker agora. Você ainda pode preencher os dados manualmente.';
+    showMsg(msg, texto, 'warn');
     console.error(err);
   } finally {
     setLoading(btn, false, 'Buscar dados');
