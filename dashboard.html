@@ -146,6 +146,17 @@
   .msg { padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.72rem; margin: 0.75rem 0; display: none; }
   .msg.error { background: rgba(224,82,82,0.1); border: 1px solid rgba(224,82,82,0.3); color: var(--red); display: block; }
   .msg.success { background: rgba(46,201,122,0.1); border: 1px solid rgba(46,201,122,0.3); color: var(--green); display: block; }
+  .msg.warn { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); display: block; }
+  .asset-preview {
+    display: none; margin: 0.75rem 0 1rem; padding: 0.85rem 1rem;
+    border: 1px solid rgba(76,184,201,0.18); border-radius: 4px; background: rgba(76,184,201,0.06);
+  }
+  .asset-preview.open { display: block; }
+  .asset-preview strong { color: var(--text); font-size: 0.8rem; }
+  .asset-preview p { color: var(--muted); font-size: 0.68rem; line-height: 1.6; margin-top: 0.35rem; }
+  .form-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .btn.secondary { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn.secondary:hover { border-color: var(--gold); color: var(--gold); }
 
   /* SIMULADOR */
   .sim-result { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 6px; padding: 1.25rem; margin-top: 1rem; }
@@ -242,8 +253,12 @@
         <div class="form-group"><label>Dividendo/mês</label><input id="f-div" type="number" placeholder="0.00" step="0.01"></div>
         <div class="form-group"><label>Setor</label><input id="f-setor" placeholder="ex: Energia"></div>
       </div>
+      <div id="ativo-preview" class="asset-preview"></div>
       <div id="msg-carteira" class="msg"></div>
-      <button class="btn" onclick="addAtivo()">+ Adicionar</button>
+      <div class="form-actions">
+        <button class="btn secondary" id="btn-buscar-ativo" onclick="buscarAtivo()">Buscar dados</button>
+        <button class="btn" onclick="addAtivo()">+ Adicionar cotas</button>
+      </div>
     </div>
     <div class="card" style="margin-top:1rem;">
       <div class="table-wrap">
@@ -386,6 +401,8 @@ if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
   );
 }
 let USER = null, CARTEIRA = [], CICLO_ATUAL = 'recuperacao';
+let ATIVO_BUSCADO = null;
+const BRAPI_TOKEN = window.MARINHO_MARKET_CONFIG?.brapiToken || '';
 
 // ── INIT ─────────────────────────────────────────
 (async () => {
@@ -430,6 +447,63 @@ function renderTabela() {
     </tr>`).join('');
 }
 
+async function buscarAtivo() {
+  const tickerInput = document.getElementById('f-ticker');
+  const ticker = tickerInput.value.trim().toUpperCase();
+  const msg = document.getElementById('msg-carteira');
+  const btn = document.getElementById('btn-buscar-ativo');
+  const preview = document.getElementById('ativo-preview');
+
+  tickerInput.value = ticker;
+  ATIVO_BUSCADO = null;
+  preview.classList.remove('open');
+  preview.innerHTML = '';
+  if (!ticker) return;
+
+  setLoading(btn, true, 'Buscando...');
+  try {
+    const params = new URLSearchParams({ range: '1d', interval: '1d', fundamental: 'true' });
+    if (BRAPI_TOKEN) params.set('token', BRAPI_TOKEN);
+
+    const res = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(ticker)}?${params.toString()}`);
+    if (!res.ok) throw new Error('cotacao_indisponivel');
+
+    const json = await res.json();
+    const ativo = json?.results?.[0];
+    if (!ativo) throw new Error('ativo_nao_encontrado');
+
+    const preco = Number(ativo.regularMarketPrice || ativo.price || 0);
+    const nome = ativo.longName || ativo.shortName || ativo.symbol || ticker;
+    const setor = ativo.sector || ativo.sectorName || '';
+    const tipo = inferirTipoAtivo(ativo, ticker);
+
+    ATIVO_BUSCADO = { ticker, nome, preco, setor, tipo };
+    document.getElementById('f-tipo').value = tipo;
+    if (preco > 0) document.getElementById('f-preco').value = preco.toFixed(2);
+    if (setor) document.getElementById('f-setor').value = setor;
+
+    const variacao = Number(ativo.regularMarketChangePercent || 0);
+    const variacaoTxt = Number.isFinite(variacao) ? `${variacao.toFixed(2)}% hoje` : 'variação indisponível';
+    preview.innerHTML = `
+      <strong>${escapeHtml(ticker)} - ${escapeHtml(nome)}</strong>
+      <p>Cotação pública: ${preco > 0 ? `R$ ${preco.toFixed(2)}` : 'indisponível'} · ${escapeHtml(variacaoTxt)} · Fonte: brapi</p>
+    `;
+    preview.classList.add('open');
+    showMsg(msg, 'Dados carregados. Confira a cotação antes de adicionar as cotas.', 'success');
+  } catch (err) {
+    showMsg(msg, 'Não consegui buscar esse ticker agora. Você ainda pode preencher os dados manualmente.', 'warn');
+    console.error(err);
+  } finally {
+    setLoading(btn, false, 'Buscar dados');
+  }
+}
+
+function inferirTipoAtivo(ativo, ticker) {
+  const texto = `${ativo.quoteType || ''} ${ativo.type || ''} ${ativo.longName || ''} ${ativo.shortName || ''}`.toLowerCase();
+  if (texto.includes('fii') || texto.includes('fundo imobili') || ticker.endsWith('11')) return 'fii';
+  return 'acao';
+}
+
 async function addAtivo() {
   const ticker = document.getElementById('f-ticker').value.trim().toUpperCase();
   const tipo   = document.getElementById('f-tipo').value;
@@ -441,10 +515,29 @@ async function addAtivo() {
 
   if (!ticker || qtd <= 0 || preco <= 0) return showMsg(msg, 'Preencha ticker, quantidade e preço.', 'error');
 
-  const { error } = await sb.from('carteira').insert({ usuario_id: USER.uid, ticker, tipo, quantidade: qtd, preco_medio: preco, dividendo_mensal: div, setor });
+  const existente = CARTEIRA.find(a => a.ticker === ticker && a.tipo === tipo);
+  let error;
+  if (existente) {
+    const qtdAtual = Number(existente.quantidade) || 0;
+    const precoAtual = Number(existente.preco_medio) || 0;
+    const novaQtd = qtdAtual + qtd;
+    const novoPrecoMedio = novaQtd > 0 ? ((qtdAtual * precoAtual) + (qtd * preco)) / novaQtd : preco;
+    const novoDividendo = (Number(existente.dividendo_mensal) || 0) + div;
+    const update = {
+      quantidade: novaQtd,
+      preco_medio: novoPrecoMedio,
+      dividendo_mensal: novoDividendo,
+      setor: setor || existente.setor
+    };
+    ({ error } = await sb.from('carteira').update(update).eq('id', existente.id).eq('usuario_id', USER.uid));
+  } else {
+    ({ error } = await sb.from('carteira').insert({ usuario_id: USER.uid, ticker, tipo, quantidade: qtd, preco_medio: preco, dividendo_mensal: div, setor }));
+  }
   if (error) return showMsg(msg, 'Erro ao salvar.', 'error');
 
   ['f-ticker','f-qtd','f-preco','f-div','f-setor'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ativo-preview').classList.remove('open');
+  ATIVO_BUSCADO = null;
   msg.style.display = 'none';
   await loadCarteira();
   renderMeta(); renderAnalise(); renderCiclos();
@@ -599,6 +692,20 @@ function showPage(p) {
 }
 async function logout() { await sb.auth.signOut(); window.location.href = 'index.html'; }
 function showMsg(el, txt, type) { el.textContent = txt; el.className = 'msg ' + type; }
+function setLoading(btn, loading, text) {
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = text;
+}
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); });
