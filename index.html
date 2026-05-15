@@ -377,7 +377,7 @@
         <label>Senha</label>
         <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="btn" onclick="fazerLogin()">Acessar</button>
+      <button class="btn" id="btn-login" onclick="fazerLogin()">Acessar</button>
       <div id="msg-login" class="msg"></div>
     </div>
 
@@ -399,7 +399,7 @@
         <input type="checkbox" id="aceito-termos">
         <label>Declaro que li e aceito os <a onclick="openModal('modal-termos')">Termos de Uso</a> e a <a onclick="openModal('modal-privacidade')">Política de Privacidade</a></label>
       </div>
-      <button class="btn" onclick="fazerCadastro()">Criar Conta</button>
+      <button class="btn" id="btn-cadastro" onclick="fazerCadastro()">Criar Conta</button>
       <div id="msg-cadastro" class="msg"></div>
     </div>
   </div>
@@ -472,23 +472,33 @@ async function fazerLogin() {
   const email = document.getElementById('login-email').value.trim();
   const senha = document.getElementById('login-senha').value;
   const msg = document.getElementById('msg-login');
+  const btn = document.getElementById('btn-login');
   if (!email || !senha) return showMsg(msg, 'Preencha e-mail e senha.', 'error');
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
-  if (error) return showMsg(msg, 'Credenciais inválidas.', 'error');
+  setLoading(btn, true, 'Entrando...');
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) return showMsg(msg, traduzErroAuth(error.message), 'error');
 
-  const { data: usuario } = await sb.from('usuarios').select('status').eq('id', data.user.id).single();
-  if (!usuario || usuario.status === 'pendente') {
-    await sb.auth.signOut();
-    return showMsg(msg, 'Conta aguardando ativação pelo administrador.', 'warn');
-  }
-  if (usuario.status === 'inativo') {
-    await sb.auth.signOut();
-    return showMsg(msg, 'Conta inativa. Entre em contato com o suporte.', 'error');
-  }
+    const { data: usuario, error: perfilError } = await sb.from('usuarios').select('status').eq('id', data.user.id).single();
+    if (perfilError) return showMsg(msg, 'Login feito, mas não foi possível carregar seu perfil. Rode o schema.sql no Supabase.', 'error');
+    if (!usuario || usuario.status === 'pendente') {
+      await sb.auth.signOut();
+      return showMsg(msg, 'Conta aguardando ativação pelo administrador.', 'warn');
+    }
+    if (usuario.status === 'inativo') {
+      await sb.auth.signOut();
+      return showMsg(msg, 'Conta inativa. Entre em contato com o suporte.', 'error');
+    }
 
-  const { data: isAdmin } = await sb.from('admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
-  window.location.href = isAdmin ? 'admin.html' : 'dashboard.html';
+    const { data: isAdmin } = await sb.from('admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
+    window.location.href = isAdmin ? 'admin.html' : 'dashboard.html';
+  } catch (err) {
+    showMsg(msg, 'Não foi possível conectar ao Supabase. Verifique config.js, variáveis da Vercel e conexão.', 'error');
+    console.error(err);
+  } finally {
+    setLoading(btn, false, 'Acessar');
+  }
 }
 
 async function fazerCadastro() {
@@ -497,24 +507,54 @@ async function fazerCadastro() {
   const senha = document.getElementById('cad-senha').value;
   const aceito = document.getElementById('aceito-termos').checked;
   const msg   = document.getElementById('msg-cadastro');
+  const btn = document.getElementById('btn-cadastro');
 
   if (!nome || !email || !senha) return showMsg(msg, 'Preencha todos os campos.', 'error');
   if (senha.length < 8) return showMsg(msg, 'Senha deve ter ao menos 8 caracteres.', 'error');
   if (!aceito) return showMsg(msg, 'Aceite os Termos de Uso para continuar.', 'error');
+  if (!SUPABASE_URL || !SUPABASE_ANON) return showMsg(msg, 'Configuração do Supabase ausente. Verifique o config.js ou as variáveis da Vercel.', 'error');
 
-  const { error } = await sb.auth.signUp({
-    email, password: senha,
-    options: { data: { nome } }
-  });
+  setLoading(btn, true, 'Criando...');
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password: senha,
+      options: { data: { nome } }
+    });
 
-  if (error) return showMsg(msg, error.message, 'error');
-  showMsg(msg, 'Conta criada! Aguarde ativação pelo administrador.', 'success');
+    if (error) return showMsg(msg, traduzErroAuth(error.message), 'error');
+
+    if (data?.user?.identities && data.user.identities.length === 0) {
+      return showMsg(msg, 'Este e-mail já está cadastrado. Tente entrar com sua senha.', 'warn');
+    }
+
+    showMsg(msg, 'Conta criada! Verifique seu e-mail se a confirmação estiver ativa. Depois aguarde ativação pelo administrador.', 'success');
+  } catch (err) {
+    showMsg(msg, 'Não foi possível criar a conta. Verifique a configuração do Supabase e as URLs permitidas em Authentication.', 'error');
+    console.error(err);
+  } finally {
+    setLoading(btn, false, 'Criar Conta');
+  }
 }
 
 // ── HELPERS ──────────────────────────────────────
 function showMsg(el, txt, type) {
   el.textContent = txt;
   el.className = 'msg ' + type;
+}
+function setLoading(btn, loading, text) {
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = text;
+}
+function traduzErroAuth(message = '') {
+  const msg = message.toLowerCase();
+  if (msg.includes('invalid login')) return 'E-mail ou senha inválidos.';
+  if (msg.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) return 'Este e-mail já está cadastrado. Tente entrar.';
+  if (msg.includes('password')) return 'Senha inválida. Use pelo menos 8 caracteres.';
+  if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+  return message || 'Erro inesperado no Supabase.';
 }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
