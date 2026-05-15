@@ -370,9 +370,13 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
 <script>
-const SUPABASE_URL  = 'SUA_SUPABASE_URL_AQUI';
-const SUPABASE_ANON = 'SUA_SUPABASE_ANON_KEY_AQUI';
+const SUPABASE_URL = window.MARINHO_SUPABASE_CONFIG?.url;
+const SUPABASE_ANON = window.MARINHO_SUPABASE_CONFIG?.anonKey;
+if (!SUPABASE_URL || !SUPABASE_ANON) {
+  throw new Error('Configure o arquivo config.js com a URL e a chave publica do Supabase.');
+}
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let USER = null, CARTEIRA = [], CICLO_ATUAL = 'recuperacao';
