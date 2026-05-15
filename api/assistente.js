@@ -67,9 +67,11 @@ module.exports = async function handler(req, res) {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      return res.status(502).json({
+      const groqMessage = data?.error?.message || data?.message || 'Falha ao chamar a Groq.';
+      return res.status(response.status === 401 ? 401 : 502).json({
         error: 'falha_groq',
         status: response.status,
+        message: groqMessage,
         details: data
       });
     }
