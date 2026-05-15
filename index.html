@@ -3,145 +3,522 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marinho Investment — Rebalanceamento Inteligente</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Marinho Investment</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0a0a0f;
-  --surface:#12121a;
-  --surface2:#1a1a25;
-  --border:#2a2a3a;
-  --accent:#6c63ff;
-  --accent2:#3ecf8e;
-  --gold:#f0b429;
-  --text:#f0f0f8;
-  --muted:#8888a8;
-  --danger:#ff5c5c;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden}
-.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(108,99,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(108,99,255,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
-.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(ellipse,rgba(108,99,255,.15) 0%,transparent 70%);pointer-events:none}
-.container{max-width:420px;margin:0 auto;padding:2rem 1rem;min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
-.logo{text-align:center;margin-bottom:3rem}
-.logo-icon{font-family:'DM Serif Display',serif;font-size:2.5rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-sub{font-size:.7rem;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;margin-top:.25rem}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(108,99,255,.5),transparent)}
-.card-title{font-size:1.1rem;font-weight:500;margin-bottom:.25rem}
-.card-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.75rem}
-.field{margin-bottom:1rem}
-.field label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.4rem;letter-spacing:.05em;text-transform:uppercase}
-.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;font-size:.9rem;color:var(--text);font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s}
-.field input:focus{border-color:var(--accent)}
-.btn{width:100%;padding:.75rem;border:none;border-radius:8px;font-size:.9rem;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer;transition:all .2s;margin-top:.5rem}
-.btn-primary{background:linear-gradient(135deg,var(--accent),#8b83ff);color:#fff}
-.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
-.status{font-size:.8rem;color:var(--danger);margin-top:.75rem;text-align:center;min-height:1.2rem}
-.status.ok{color:var(--accent2)}
-.disclaimer{margin-top:1.5rem;padding:1rem;background:rgba(240,180,41,.05);border:1px solid rgba(240,180,41,.2);border-radius:8px;font-size:.72rem;color:var(--muted);line-height:1.6}
-.disclaimer strong{color:var(--gold)}
-.tabs-login{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:1.5rem}
-.tab-btn{flex:1;padding:.4rem;border:none;border-radius:6px;font-size:.8rem;font-family:'Outfit',sans-serif;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s}
-.tab-btn.active{background:var(--accent);color:#fff;font-weight:500}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes spin{to{transform:rotate(360deg)}}
+  :root {
+    --bg: #06090a;
+    --bg2: #0d1517;
+    --card: #111a1c;
+    --border: #1e2d30;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --green: #2ec97a;
+    --red: #e05252;
+    --text: #e2e8ea;
+    --muted: #6b8085;
+    --font-head: 'Cormorant Garamond', serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 50%, rgba(201,168,76,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(46,201,122,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 420px;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .logo-icon {
+    width: 56px; height: 56px;
+    border: 1.5px solid var(--gold);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .logo-icon::before {
+    content: 'M';
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .logo h1 {
+    font-family: var(--font-head);
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+  .logo p {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2rem;
+  }
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    cursor: pointer;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .form-group { margin-bottom: 1.25rem; }
+  label {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.7rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--gold); }
+  input::placeholder { color: var(--muted); }
+  .btn {
+    width: 100%;
+    padding: 0.8rem;
+    background: var(--gold);
+    color: #08100f;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.5rem;
+  }
+  .btn:hover { background: var(--gold2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg {
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-align: center;
+    display: none;
+  }
+  .msg.error { background: rgba(224,82,82,0.1); border: 1px solid rgba(224,82,82,0.3); color: var(--red); display: block; }
+  .msg.success { background: rgba(46,201,122,0.1); border: 1px solid rgba(46,201,122,0.3); color: var(--green); display: block; }
+  .msg.warn { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); display: block; }
+  .legal-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .legal-links a {
+    color: var(--muted);
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .legal-links a:hover { color: var(--gold); }
+  .checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .checkbox-group input[type=checkbox] {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: var(--gold);
+  }
+  .checkbox-group label {
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+  .checkbox-group label a { color: var(--gold); cursor: pointer; }
+
+  /* ---- COOKIE BANNER ---- */
+  #cookie-banner {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--gold);
+    padding: 1rem 1.5rem;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  #cookie-banner p { font-size: 0.72rem; color: var(--muted); flex: 1; line-height: 1.6; }
+  #cookie-banner a { color: var(--gold); cursor: pointer; text-decoration: underline; }
+  .cookie-btns { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .btn-cookie {
+    padding: 0.45rem 1rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--gold);
+    transition: all 0.2s;
+  }
+  .btn-cookie.accept { background: var(--gold); color: #08100f; }
+  .btn-cookie.accept:hover { background: var(--gold2); }
+  .btn-cookie.refuse { background: transparent; color: var(--gold); }
+  .btn-cookie.refuse:hover { background: rgba(201,168,76,0.08); }
+
+  /* ---- MODALS ---- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 2rem;
+  }
+  .modal h2 {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--gold);
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+  .modal p, .modal li {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 0.75rem;
+  }
+  .modal h3 {
+    font-size: 0.8rem;
+    color: var(--text);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 1.25rem 0 0.5rem;
+  }
+  .modal-close {
+    display: block;
+    margin-top: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--gold); }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-<div class="bg-grid"></div>
-<div class="bg-glow"></div>
-<div class="container">
-  <div class="logo">
-    <div class="logo-icon">Marinho Investment</div>
-    <div class="logo-sub">Rebalanceamento & Análise</div>
-  </div>
-  <div class="card">
-    <div class="tabs-login">
-      <button class="tab-btn active" onclick="setTab('login')">Entrar</button>
-      <button class="tab-btn" onclick="setTab('register')">Criar conta</button>
-    </div>
-    <div id="form-login">
-      <div class="card-title">Bem-vindo de volta</div>
-      <div class="card-sub">Acesse sua carteira personalizada</div>
-      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-      <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
-      <div class="status" id="login-status"></div>
-    </div>
-    <div id="form-register" style="display:none">
-      <div class="card-title">Criar conta</div>
-      <div class="card-sub">Acesso liberado pelo administrador</div>
-      <div class="field"><label>Nome completo</label><input type="text" id="reg-nome" placeholder="Seu nome"></div>
-      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres"></div>
-      <button class="btn btn-primary" onclick="doRegister()">Solicitar acesso</button>
-      <div class="status" id="reg-status"></div>
-    </div>
-  </div>
-  <div class="disclaimer">
-    <strong>⚠ Aviso importante:</strong> O Marinho Investment é uma ferramenta de <strong>organização e rebalanceamento de carteira</strong>. Não constitui recomendação de investimentos, consultoria financeira ou análise de valores mobiliários nos termos da regulação CVM. Toda decisão de investimento é de responsabilidade exclusiva do usuário. Consulte um profissional habilitado (CNPI) antes de tomar decisões de investimento.
+
+<div class="grid-bg"></div>
+
+<!-- COOKIE BANNER -->
+<div id="cookie-banner">
+  <p>Utilizamos cookies analíticos para melhorar a experiência. Ao aceitar, o Google Analytics será carregado. Ao recusar, nenhum dado de navegação é coletado. <a onclick="openModal('modal-privacidade')">Política de Privacidade</a></p>
+  <div class="cookie-btns">
+    <button class="btn-cookie refuse" onclick="recusarCookies()">Recusar</button>
+    <button class="btn-cookie accept" onclick="aceitarCookies()">Aceitar</button>
   </div>
 </div>
+
+<!-- MODAL: POLÍTICA DE PRIVACIDADE -->
+<div class="modal-overlay" id="modal-privacidade">
+  <div class="modal">
+    <h2>Política de Privacidade</h2>
+    <p>Última atualização: Maio de 2026</p>
+    <h3>1. Dados coletados</h3>
+    <p>Coletamos nome, endereço de e-mail e dados de carteira de investimentos inseridos voluntariamente. Endereços IP são armazenados exclusivamente em formato de hash SHA-256 e não permitem identificação direta.</p>
+    <h3>2. Finalidade</h3>
+    <p>Os dados são utilizados para prestação do serviço de organização de portfólio, autenticação e comunicação relacionada à conta. Não utilizamos seus dados para publicidade de terceiros.</p>
+    <h3>3. Compartilhamento</h3>
+    <p>Seus dados são processados pela Supabase (banco de dados, autenticação) e, se você consentir, pelo Google Analytics (análise de tráfego anônima). Nenhum dado é vendido a terceiros.</p>
+    <h3>4. Retenção</h3>
+    <p>Seus dados são mantidos enquanto sua conta estiver ativa. Ao solicitar exclusão da conta, todos os dados são removidos em até 15 dias.</p>
+    <h3>5. Seus direitos (LGPD)</h3>
+    <p>Você tem direito de acesso, correção, exclusão, portabilidade e revogação de consentimento. Solicitações devem ser encaminhadas ao nosso DPO pelo e-mail: <strong>privacidade@marinhoinvestment.com.br</strong></p>
+    <h3>6. Base legal</h3>
+    <p>O tratamento de dados se baseia no consentimento (art. 7º, I da LGPD) e na execução do contrato de prestação de serviços (art. 7º, V).</p>
+    <span class="modal-close" onclick="closeModal('modal-privacidade')">Fechar</span>
+  </div>
+</div>
+
+<!-- MODAL: TERMOS DE USO -->
+<div class="modal-overlay" id="modal-termos">
+  <div class="modal">
+    <h2>Termos de Uso</h2>
+    <p>Última atualização: Maio de 2026</p>
+    <h3>1. Serviço</h3>
+    <p>O Marinho Investment é uma ferramenta de organização e simulação de portfólio de investimentos. <strong>Não constitui recomendação de investimento</strong> e não é autorizado pela CVM como consultor de valores mobiliários.</p>
+    <h3>2. Responsabilidade</h3>
+    <p>As análises e scores exibidos são algorítmicos e informativos. Decisões de investimento são de exclusiva responsabilidade do usuário. O Marinho Investment não se responsabiliza por perdas financeiras.</p>
+    <h3>3. Conta</h3>
+    <p>Cada usuário é responsável pela segurança de suas credenciais. Contas inativas por mais de 12 meses poderão ser desativadas mediante aviso prévio.</p>
+    <h3>4. Cancelamento</h3>
+    <p>O usuário pode cancelar a conta e solicitar exclusão de dados a qualquer momento pelo painel de configurações ou pelo e-mail de suporte.</p>
+    <h3>5. Planos e Pagamento</h3>
+    <p>Os planos são mensais e não possuem fidelidade. O cancelamento interrompe a cobrança no próximo ciclo.</p>
+    <h3>6. Contato</h3>
+    <p>Dúvidas: <strong>contato@marinhoinvestment.com.br</strong> | DPO: <strong>privacidade@marinhoinvestment.com.br</strong></p>
+    <span class="modal-close" onclick="closeModal('modal-termos')">Fechar</span>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <h1>Marinho Investment</h1>
+    <p>Gestão de Portfólio</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">Entrar</button>
+      <button class="tab" onclick="showTab('cadastro')">Cadastrar</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="tab-login">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn" onclick="fazerLogin()">Acessar</button>
+      <div id="msg-login" class="msg"></div>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="tab-cadastro" class="hidden">
+      <div class="form-group">
+        <label>Nome</label>
+        <input type="text" id="cad-nome" placeholder="Seu nome">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="cad-senha" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="aceito-termos">
+        <label>Declaro que li e aceito os <a onclick="openModal('modal-termos')">Termos de Uso</a> e a <a onclick="openModal('modal-privacidade')">Política de Privacidade</a></label>
+      </div>
+      <button class="btn" onclick="fazerCadastro()">Criar Conta</button>
+      <div id="msg-cadastro" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="legal-links">
+    <a onclick="openModal('modal-privacidade')">Privacidade</a> &nbsp;·&nbsp;
+    <a onclick="openModal('modal-termos')">Termos</a> &nbsp;·&nbsp;
+    <a href="mailto:privacidade@marinhoinvestment.com.br">DPO</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxN1RQx9hlw4VByEF3bnXIek4bIXtPvK8wvaoWxtVHbn4JIbMAdggsN3Qq5mD45X-zb/exec';
-const SHEET_USERS = 'Usuarios';
+// ── CONFIG ───────────────────────────────────────
+const SUPABASE_URL  = 'SUA_SUPABASE_URL_AQUI';
+const SUPABASE_ANON = 'SUA_SUPABASE_ANON_KEY_AQUI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-function setTab(t){
-  document.getElementById('form-login').style.display=t==='login'?'block':'none';
-  document.getElementById('form-register').style.display=t==='register'?'block':'none';
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(t==='login'?0:1)));
+// ── COOKIE CONSENT ───────────────────────────────
+const consent = localStorage.getItem('cookie_consent');
+if (consent === 'accepted') { loadAnalytics(); document.getElementById('cookie-banner').style.display = 'none'; }
+if (consent === 'refused')  { document.getElementById('cookie-banner').style.display = 'none'; }
+
+function aceitarCookies() {
+  localStorage.setItem('cookie_consent', 'accepted');
+  loadAnalytics();
+  document.getElementById('cookie-banner').style.display = 'none';
+}
+function recusarCookies() {
+  localStorage.setItem('cookie_consent', 'refused');
+  document.getElementById('cookie-banner').style.display = 'none';
+}
+function loadAnalytics() {
+  // GA4 só carrega após consentimento
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX'; // substitua pelo seu ID
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date()); gtag('config', 'G-XXXXXXXXXX', { anonymize_ip: true });
 }
 
-async function fetchSheet(sheet){
-  const url=`${SCRIPT_URL}?sheet=${encodeURIComponent(sheet)}`;
-  const r=await fetch(url);
-  return r.json();
+// ── SESSION CHECK ────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    const { data: usuario } = await sb.from('usuarios').select('status, plano').eq('id', session.user.id).single();
+    if (!usuario) return;
+    if (usuario.status === 'ativo') {
+      const { data: isAdmin } = await sb.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
+      window.location.href = isAdmin ? 'admin.html' : 'dashboard.html';
+    }
+  }
+})();
+
+// ── TABS ─────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tab-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('tab-cadastro').classList.toggle('hidden', tab !== 'cadastro');
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'cadastro' && i === 1)));
 }
 
-async function appendSheet(sheet,values){
-  await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'append',sheet,values})});
+// ── AUTH ─────────────────────────────────────────
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const msg = document.getElementById('msg-login');
+  if (!email || !senha) return showMsg(msg, 'Preencha e-mail e senha.', 'error');
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if (error) return showMsg(msg, 'Credenciais inválidas.', 'error');
+
+  const { data: usuario } = await sb.from('usuarios').select('status').eq('id', data.user.id).single();
+  if (!usuario || usuario.status === 'pendente') {
+    await sb.auth.signOut();
+    return showMsg(msg, 'Conta aguardando ativação pelo administrador.', 'warn');
+  }
+  if (usuario.status === 'inativo') {
+    await sb.auth.signOut();
+    return showMsg(msg, 'Conta inativa. Entre em contato com o suporte.', 'error');
+  }
+
+  const { data: isAdmin } = await sb.from('admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
+  window.location.href = isAdmin ? 'admin.html' : 'dashboard.html';
 }
 
-function hashSimple(s){
-  let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);
+async function fazerCadastro() {
+  const nome  = document.getElementById('cad-nome').value.trim();
+  const email = document.getElementById('cad-email').value.trim();
+  const senha = document.getElementById('cad-senha').value;
+  const aceito = document.getElementById('aceito-termos').checked;
+  const msg   = document.getElementById('msg-cadastro');
+
+  if (!nome || !email || !senha) return showMsg(msg, 'Preencha todos os campos.', 'error');
+  if (senha.length < 8) return showMsg(msg, 'Senha deve ter ao menos 8 caracteres.', 'error');
+  if (!aceito) return showMsg(msg, 'Aceite os Termos de Uso para continuar.', 'error');
+
+  const { error } = await sb.auth.signUp({
+    email, password: senha,
+    options: { data: { nome } }
+  });
+
+  if (error) return showMsg(msg, error.message, 'error');
+  showMsg(msg, 'Conta criada! Aguarde ativação pelo administrador.', 'success');
 }
 
-async function doLogin(){
-  const email=document.getElementById('login-email').value.trim().toLowerCase();
-  const pass=document.getElementById('login-pass').value;
-  const st=document.getElementById('login-status');
-  if(!email||!pass){st.textContent='Preencha todos os campos.';return;}
-  st.innerHTML='<span class="spinner"></span>Verificando...';st.className='status';
-  try{
-    const rows=await fetchSheet(SHEET_USERS);
-    const data=Array.isArray(rows)?rows:[];
-    const user=data.find(r=>r[1]&&r[1].toLowerCase()===email&&r[2]===hashSimple(pass));
-    if(!user){st.textContent='E-mail ou senha incorretos.';return;}
-    if(user[4]!=='ATIVO'){st.textContent='Acesso inativo. Contate o administrador.';return;}
-    sessionStorage.setItem('vf_user',JSON.stringify({id:user[0],nome:user[3],email:user[1],plano:user[5]||'BASICO'}));
-    st.className='status ok';st.textContent='Acesso liberado! Redirecionando...';
-    setTimeout(()=>window.location.href='dashboard.html',800);
-  }catch(e){st.textContent='Erro de conexão. Tente novamente.';}
+// ── HELPERS ──────────────────────────────────────
+function showMsg(el, txt, type) {
+  el.textContent = txt;
+  el.className = 'msg ' + type;
 }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-async function doRegister(){
-  const nome=document.getElementById('reg-nome').value.trim();
-  const email=document.getElementById('reg-email').value.trim().toLowerCase();
-  const pass=document.getElementById('reg-pass').value;
-  const st=document.getElementById('reg-status');
-  if(!nome||!email||!pass||pass.length<6){st.textContent='Preencha todos os campos (senha mín. 6 caracteres).';return;}
-  st.innerHTML='<span class="spinner"></span>Enviando solicitação...';st.className='status';
-  try{
-    const rows=await fetchSheet(SHEET_USERS);
-    const data=Array.isArray(rows)?rows:[];
-    if(data.some(r=>r[1]&&r[1].toLowerCase()===email)){st.textContent='E-mail já cadastrado.';return;}
-    const id='U'+Date.now();
-    await appendSheet(SHEET_USERS,[id,email,hashSimple(pass),nome,'PENDENTE','BASICO',new Date().toLocaleDateString('pt-BR')]);
-    st.className='status ok';st.textContent='Solicitação enviada! Aguarde liberação do administrador.';
-  }catch(e){st.textContent='Erro ao enviar. Tente novamente.';}
-}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+  if (e.key === 'Enter' && !document.getElementById('tab-login').classList.contains('hidden')) fazerLogin();
+});
 </script>
 </body>
 </html>
