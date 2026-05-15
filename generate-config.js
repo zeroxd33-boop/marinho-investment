@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const root = __dirname;
+const dist = path.join(root, 'dist');
 const url = process.env.SUPABASE_URL;
 const anonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 
@@ -9,8 +11,14 @@ if (!url || !anonKey) {
   process.exit(1);
 }
 
-const config = `window.MARINHO_SUPABASE_CONFIG = ${JSON.stringify({ url, anonKey }, null, 2)};\n`;
-const outputPath = path.join(__dirname, 'config.js');
+fs.rmSync(dist, { recursive: true, force: true });
+fs.mkdirSync(dist, { recursive: true });
 
-fs.writeFileSync(outputPath, config, 'utf8');
-console.log('Generated config.js for deployment.');
+for (const file of ['index.html', 'dashboard.html', 'admin.html']) {
+  fs.copyFileSync(path.join(root, file), path.join(dist, file));
+}
+
+const config = `window.MARINHO_SUPABASE_CONFIG = ${JSON.stringify({ url, anonKey }, null, 2)};\n`;
+fs.writeFileSync(path.join(dist, 'config.js'), config, 'utf8');
+
+console.log('Generated static deployment in dist/.');
