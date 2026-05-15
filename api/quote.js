@@ -1,4 +1,3 @@
-
 const FREE_TICKERS = new Set(['PETR4', 'MGLU3', 'VALE3', 'ITUB4']);
 
 module.exports = async function handler(req, res) {
@@ -32,7 +31,7 @@ module.exports = async function handler(req, res) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      return res.status(502).json({
         error: 'cotacao_indisponivel',
         status: response.status,
         details: data
