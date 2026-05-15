@@ -27,10 +27,11 @@
     font-family: var(--font-mono);
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   body::before {
     content: '';
@@ -54,6 +55,7 @@
     width: 100%;
     max-width: 420px;
     padding: 2rem;
+    margin: 2rem 0;
     position: relative;
     z-index: 1;
   }
