@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.carteira (
   ticker TEXT NOT NULL,
   quantidade NUMERIC NOT NULL DEFAULT 0 CHECK (quantidade >= 0),
   preco_medio NUMERIC NOT NULL DEFAULT 0 CHECK (preco_medio >= 0),
+  cotacao_atual NUMERIC NOT NULL DEFAULT 0 CHECK (cotacao_atual >= 0),
   dividendo_mensal NUMERIC NOT NULL DEFAULT 0 CHECK (dividendo_mensal >= 0),
   setor TEXT DEFAULT 'Outros',
   tipo TEXT NOT NULL DEFAULT 'acao' CHECK (tipo IN ('acao', 'fii', 'renda_fixa')),
@@ -46,6 +47,10 @@ CREATE TABLE IF NOT EXISTS public.carteira (
 CREATE INDEX IF NOT EXISTS idx_carteira_usuario_id ON public.carteira(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_status ON public.usuarios(status);
 CREATE INDEX IF NOT EXISTS idx_usuarios_plano ON public.usuarios(plano);
+
+-- Atualizacao para bases existentes: adiciona cotacao atual sem recriar a tabela.
+ALTER TABLE public.carteira
+  ADD COLUMN IF NOT EXISTS cotacao_atual NUMERIC NOT NULL DEFAULT 0 CHECK (cotacao_atual >= 0);
 
 -- ============================================================
 -- 2. Helpers seguros

@@ -249,7 +249,8 @@
           <select id="f-tipo"><option value="acao">Ação</option><option value="fii">FII</option><option value="renda_fixa">Renda Fixa</option></select>
         </div>
         <div class="form-group"><label>Qtd</label><input id="f-qtd" type="number" placeholder="0"></div>
-        <div class="form-group"><label>Preço médio</label><input id="f-preco" type="number" placeholder="0.00" step="0.01"></div>
+        <div class="form-group"><label>Preço médio pago</label><input id="f-preco" type="number" placeholder="0.00" step="0.01"></div>
+        <div class="form-group"><label>Cotação atual</label><input id="f-cotacao" type="number" placeholder="0.00" step="0.01"></div>
         <div class="form-group"><label>Dividendo/mês</label><input id="f-div" type="number" placeholder="0.00" step="0.01"></div>
         <div class="form-group"><label>Setor</label><input id="f-setor" placeholder="ex: Energia"></div>
       </div>
@@ -263,8 +264,8 @@
     <div class="card" style="margin-top:1rem;">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Ticker</th><th>Tipo</th><th>Qtd</th><th>P. Médio</th><th>Total</th><th>Div/mês</th><th>Setor</th><th></th></tr></thead>
-          <tbody id="tb-carteira"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Carregando...</td></tr></tbody>
+          <thead><tr><th>Ticker</th><th>Tipo</th><th>Qtd</th><th>P. Médio</th><th>Cotação</th><th>Investido</th><th>Atual</th><th>Resultado</th><th>Div/mês</th><th>Setor</th><th></th></tr></thead>
+          <tbody id="tb-carteira"><tr><td colspan="11" style="color:var(--muted);text-align:center;padding:2rem;">Carregando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -432,18 +433,31 @@ async function loadCarteira() {
 
 function renderTabela() {
   const tb = document.getElementById('tb-carteira');
-  if (!CARTEIRA.length) { tb.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Nenhum ativo cadastrado.</td></tr>'; return; }
-  tb.innerHTML = CARTEIRA.map(a => `
+  if (!CARTEIRA.length) { tb.innerHTML = '<tr><td colspan="11" style="color:var(--muted);text-align:center;padding:2rem;">Nenhum ativo cadastrado.</td></tr>'; return; }
+  tb.innerHTML = CARTEIRA.map(a => {
+    const qtd = Number(a.quantidade) || 0;
+    const precoMedio = Number(a.preco_medio) || 0;
+    const cotacao = Number(a.cotacao_atual) || precoMedio;
+    const investido = qtd * precoMedio;
+    const atual = qtd * cotacao;
+    const resultado = atual - investido;
+    const resultadoPct = investido > 0 ? (resultado / investido) * 100 : 0;
+    const resultadoClass = resultado >= 0 ? 'green' : 'red';
+    return `
     <tr>
       <td><strong>${a.ticker}</strong></td>
       <td><span class="badge ${a.tipo}">${a.tipo === 'renda_fixa' ? 'R.Fixa' : a.tipo.toUpperCase()}</span></td>
-      <td>${a.quantidade}</td>
-      <td>R$ ${Number(a.preco_medio).toFixed(2)}</td>
-      <td>R$ ${(a.quantidade * a.preco_medio).toFixed(2)}</td>
+      <td>${qtd}</td>
+      <td>R$ ${precoMedio.toFixed(2)}</td>
+      <td>R$ ${cotacao.toFixed(2)}</td>
+      <td>R$ ${investido.toFixed(2)}</td>
+      <td>R$ ${atual.toFixed(2)}</td>
+      <td style="color:var(--${resultadoClass})">R$ ${resultado.toFixed(2)}<br><span style="font-size:0.62rem;">${resultadoPct.toFixed(1)}%</span></td>
       <td style="color:var(--green)">R$ ${Number(a.dividendo_mensal).toFixed(2)}</td>
-      <td style="color:var(--muted)">${a.setor || '—'}</td>
+      <td style="color:var(--muted)">${escapeHtml(a.setor || '—')}</td>
       <td><button class="btn sm danger" onclick="removeAtivo('${a.id}')">✕</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function buscarAtivo() {
@@ -478,7 +492,7 @@ async function buscarAtivo() {
 
     ATIVO_BUSCADO = { ticker, nome, preco, setor, tipo };
     document.getElementById('f-tipo').value = tipo;
-    if (preco > 0) document.getElementById('f-preco').value = preco.toFixed(2);
+    if (preco > 0) document.getElementById('f-cotacao').value = preco.toFixed(2);
     if (setor) document.getElementById('f-setor').value = setor;
 
     const variacao = Number(ativo.regularMarketChangePercent || 0);
@@ -515,6 +529,7 @@ async function addAtivo() {
   const tipo   = document.getElementById('f-tipo').value;
   const qtd    = parseFloat(document.getElementById('f-qtd').value) || 0;
   const preco  = parseFloat(document.getElementById('f-preco').value) || 0;
+  const cotacao = parseFloat(document.getElementById('f-cotacao').value) || preco;
   const div    = parseFloat(document.getElementById('f-div').value) || 0;
   const setor  = document.getElementById('f-setor').value.trim();
   const msg    = document.getElementById('msg-carteira');
@@ -532,16 +547,22 @@ async function addAtivo() {
     const update = {
       quantidade: novaQtd,
       preco_medio: novoPrecoMedio,
+      cotacao_atual: cotacao,
       dividendo_mensal: novoDividendo,
       setor: setor || existente.setor
     };
     ({ error } = await sb.from('carteira').update(update).eq('id', existente.id).eq('usuario_id', USER.uid));
   } else {
-    ({ error } = await sb.from('carteira').insert({ usuario_id: USER.uid, ticker, tipo, quantidade: qtd, preco_medio: preco, dividendo_mensal: div, setor }));
+    ({ error } = await sb.from('carteira').insert({ usuario_id: USER.uid, ticker, tipo, quantidade: qtd, preco_medio: preco, cotacao_atual: cotacao, dividendo_mensal: div, setor }));
   }
-  if (error) return showMsg(msg, 'Erro ao salvar.', 'error');
+  if (error) {
+    const texto = String(error.message || '').includes('cotacao_atual')
+      ? 'Atualize o Supabase: rode o ALTER TABLE para adicionar cotacao_atual antes de salvar ativos com cotação.'
+      : 'Erro ao salvar.';
+    return showMsg(msg, texto, 'error');
+  }
 
-  ['f-ticker','f-qtd','f-preco','f-div','f-setor'].forEach(id => document.getElementById(id).value = '');
+  ['f-ticker','f-qtd','f-preco','f-cotacao','f-div','f-setor'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ativo-preview').classList.remove('open');
   ATIVO_BUSCADO = null;
   msg.style.display = 'none';
