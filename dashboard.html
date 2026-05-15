@@ -374,10 +374,14 @@
 <script>
 const SUPABASE_URL = window.MARINHO_SUPABASE_CONFIG?.url;
 const SUPABASE_ANON = window.MARINHO_SUPABASE_CONFIG?.anonKey;
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  throw new Error('Configure o arquivo config.js com a URL e a chave publica do Supabase.');
+let sb = null;
+
+if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+} else {
+  console.error('Configuração do Supabase ausente. Crie config.js localmente ou configure as variáveis na Vercel.');
+  alert('Configuração do Supabase ausente. Configure SUPABASE_URL e SUPABASE_ANON_KEY na Vercel e faça redeploy.');
 }
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let USER = null, CARTEIRA = [], CICLO_ATUAL = 'recuperacao';
 
@@ -576,8 +580,9 @@ async function deletarConta() {
   const { error: reauth } = await sb.auth.signInWithPassword({ email: USER.email, password: senha });
   if (reauth) return showMsg(msg, 'Senha incorreta.', 'error');
 
-  await sb.from('carteira').delete().eq('usuario_id', USER.uid);
-  await sb.from('usuarios').delete().eq('id', USER.uid);
+  const { error } = await sb.rpc('solicitar_exclusao_conta');
+  if (error) return showMsg(msg, 'Erro ao solicitar exclusao: ' + error.message, 'error');
+
   await sb.auth.signOut();
   window.location.href = 'index.html';
 }

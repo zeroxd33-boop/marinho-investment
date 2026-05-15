@@ -125,10 +125,14 @@
 <script>
 const SUPABASE_URL = window.MARINHO_SUPABASE_CONFIG?.url;
 const SUPABASE_ANON = window.MARINHO_SUPABASE_CONFIG?.anonKey;
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  throw new Error('Configure o arquivo config.js com a URL e a chave publica do Supabase.');
+let sb = null;
+
+if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+} else {
+  console.error('Configuração do Supabase ausente. Crie config.js localmente ou configure as variáveis na Vercel.');
+  alert('Configuração do Supabase ausente. Configure SUPABASE_URL e SUPABASE_ANON_KEY na Vercel e faça redeploy.');
 }
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let USERS = [], ADMIN_ID = null;
 

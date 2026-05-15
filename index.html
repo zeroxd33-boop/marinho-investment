@@ -417,10 +417,20 @@
 // ── CONFIG ───────────────────────────────────────
 const SUPABASE_URL = window.MARINHO_SUPABASE_CONFIG?.url;
 const SUPABASE_ANON = window.MARINHO_SUPABASE_CONFIG?.anonKey;
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  throw new Error('Configure o arquivo config.js com a URL e a chave publica do Supabase.');
+let sb = null;
+
+if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+} else {
+  console.error('Configuração do Supabase ausente. Crie config.js localmente ou configure as variáveis na Vercel.');
+  document.addEventListener('DOMContentLoaded', () => {
+    const loginMsg = document.getElementById('msg-login');
+    const cadastroMsg = document.getElementById('msg-cadastro');
+    const texto = 'Configuração do Supabase ausente. No local, mantenha config.js ao lado do index.html. Na Vercel, configure SUPABASE_URL e SUPABASE_ANON_KEY e faça redeploy.';
+    if (loginMsg) showMsg(loginMsg, texto, 'error');
+    if (cadastroMsg) showMsg(cadastroMsg, texto, 'error');
+  });
 }
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── COOKIE CONSENT ───────────────────────────────
 const consent = localStorage.getItem('cookie_consent');
@@ -475,6 +485,8 @@ async function fazerLogin() {
   const btn = document.getElementById('btn-login');
   if (!email || !senha) return showMsg(msg, 'Preencha e-mail e senha.', 'error');
 
+  if (!sb) return showMsg(msg, 'Configuração do Supabase ausente. Verifique config.js local ou as variáveis da Vercel.', 'error');
+
   setLoading(btn, true, 'Entrando...');
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
@@ -512,7 +524,7 @@ async function fazerCadastro() {
   if (!nome || !email || !senha) return showMsg(msg, 'Preencha todos os campos.', 'error');
   if (senha.length < 8) return showMsg(msg, 'Senha deve ter ao menos 8 caracteres.', 'error');
   if (!aceito) return showMsg(msg, 'Aceite os Termos de Uso para continuar.', 'error');
-  if (!SUPABASE_URL || !SUPABASE_ANON) return showMsg(msg, 'Configuração do Supabase ausente. Verifique o config.js ou as variáveis da Vercel.', 'error');
+  if (!sb) return showMsg(msg, 'Configuração do Supabase ausente. Verifique config.js local ou as variáveis da Vercel.', 'error');
 
   setLoading(btn, true, 'Criando...');
   try {
