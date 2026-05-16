@@ -639,6 +639,124 @@ async function removeAtivo(id) {
   await loadCarteira(); renderMeta(); renderAnalise(); renderCiclos();
 }
 
+// ── PROVENTOS ─────────────────────────────────────
+function renderSelectProventos() {
+  const sel = document.getElementById('p-ativo');
+  if (!sel) return;
+  const valorAtual = sel.value;
+  sel.innerHTML = CARTEIRA.length
+    ? CARTEIRA.map(a => `<option value="${a.id}" data-ticker="${a.ticker}">${a.ticker}</option>`).join('')
+    : '<option value="">— Adicione ativos primeiro —</option>';
+  // mantém seleção anterior se ainda existir
+  if (valorAtual) sel.value = valorAtual;
+}
+
+async function loadProventos() {
+  const { data } = await sb.from('proventos')
+    .select('*')
+    .eq('usuario_id', USER.uid)
+    .order('data_pagamento', { ascending: false });
+  PROVENTOS = data || [];
+  renderProventos();
+}
+
+function renderProventos() {
+  const tb = document.getElementById('tb-proventos');
+  if (!tb) return;
+
+  // KPIs
+  const agora = new Date();
+  const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+  const totalMes = PROVENTOS
+    .filter(p => p.data_pagamento && p.data_pagamento.startsWith(mesAtual) && p.moeda === 'BRL')
+    .reduce((s, p) => s + Number(p.valor), 0);
+  const moedas = [...new Set(PROVENTOS.map(p => p.moeda).filter(Boolean))].join(', ') || 'BRL';
+
+  const elMes     = document.getElementById('p-total-mes');
+  const elReg     = document.getElementById('p-registros');
+  const elMoedas  = document.getElementById('p-moedas');
+  if (elMes)    elMes.textContent    = 'R$ ' + totalMes.toFixed(2);
+  if (elReg)    elReg.textContent    = PROVENTOS.length;
+  if (elMoedas) elMoedas.textContent = moedas;
+
+  if (!PROVENTOS.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">Nenhum provento cadastrado.</td></tr>';
+    return;
+  }
+
+  tb.innerHTML = PROVENTOS.map(p => {
+    const data = p.data_pagamento
+      ? new Date(p.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR')
+      : '—';
+    const tipoLabel = {
+      dividendo: 'Dividendo', jcp: 'JCP', rendimento_fii: 'Rend. FII',
+      cupom: 'Cupom', rendimento: 'Rendimento', outro: 'Outro'
+    }[p.tipo] || p.tipo;
+    return `
+    <tr>
+      <td style="color:var(--muted)">${data}</td>
+      <td><strong>${escapeHtml(p.ticker)}</strong></td>
+      <td><span class="badge acao" style="font-size:0.58rem;">${escapeHtml(tipoLabel)}</span></td>
+      <td style="color:var(--green)">
+        ${p.moeda !== 'BRL' ? `<span style="font-size:0.65rem;color:var(--muted)">${p.moeda} </span>` : 'R$ '}${Number(p.valor).toFixed(2)}
+      </td>
+      <td style="color:var(--muted)">${escapeHtml(p.competencia || '—')}</td>
+      <td style="color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.observacao || '')}">${escapeHtml(p.observacao || '—')}</td>
+      <td><button class="btn sm danger" onclick="removeProvento('${p.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addProvento() {
+  const msg = document.getElementById('msg-proventos');
+  const sel = document.getElementById('p-ativo');
+
+  if (!CARTEIRA.length) return showMsg(msg, 'Adicione ativos na carteira antes de registrar proventos.', 'error');
+
+  const ativoId = sel.value;
+  const ativo   = CARTEIRA.find(a => a.id === ativoId);
+  if (!ativo) return showMsg(msg, 'Selecione um ativo válido.', 'error');
+
+  const tipo        = document.getElementById('p-tipo').value;
+  const valor       = parseFloat(document.getElementById('p-valor').value) || 0;
+  const moeda       = document.getElementById('p-moeda').value;
+  const data        = document.getElementById('p-data').value;
+  const competencia = document.getElementById('p-competencia').value.trim();
+  const observacao  = document.getElementById('p-obs').value.trim();
+
+  if (valor <= 0) return showMsg(msg, 'Informe um valor maior que zero.', 'error');
+  if (!data)      return showMsg(msg, 'Informe a data de pagamento.', 'error');
+
+  const { error } = await sb.from('proventos').insert({
+    usuario_id:     USER.uid,
+    carteira_id:    ativoId,
+    ticker:         ativo.ticker,
+    tipo,
+    valor,
+    moeda,
+    data_pagamento: data,
+    competencia:    competencia || null,
+    observacao:     observacao  || null
+  });
+
+  if (error) return showMsg(msg, 'Erro ao salvar: ' + error.message, 'error');
+
+  // limpa formulário
+  document.getElementById('p-valor').value       = '';
+  document.getElementById('p-data').value        = '';
+  document.getElementById('p-competencia').value = '';
+  document.getElementById('p-obs').value         = '';
+  msg.style.display = 'none';
+
+  await loadProventos();
+}
+
+async function removeProvento(id) {
+  if (!confirm('Remover este provento?')) return;
+  await sb.from('proventos').delete().eq('id', id).eq('usuario_id', USER.uid);
+  await loadProventos();
+}
+
 // ── META ─────────────────────────────────────────
 function renderMeta() {
   const total = CARTEIRA.reduce((s, a) => s + Number(a.dividendo_mensal), 0);
