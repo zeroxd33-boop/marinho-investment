@@ -39,14 +39,14 @@ module.exports = async function handler(req, res) {
 
       acc.valor_investido += investido;
       acc.valor_atual += atual;
-      acc.renda_mensal_estimada += Number(item.dividendo_mensal) || 0;
+      acc.renda_mensal_cadastrada += Number(item.dividendo_mensal) || 0;
       acc.por_tipo[item.tipo || 'nao_informado'] = (acc.por_tipo[item.tipo || 'nao_informado'] || 0) + atual;
       acc.por_setor[item.setor || 'Nao informado'] = (acc.por_setor[item.setor || 'Nao informado'] || 0) + atual;
       return acc;
     }, {
       valor_investido: 0,
       valor_atual: 0,
-      renda_mensal_estimada: 0,
+      renda_mensal_cadastrada: 0,
       por_tipo: {},
       por_setor: {}
     });
@@ -74,9 +74,13 @@ module.exports = async function handler(req, res) {
               'Nao mande o usuario consultar profissional financeiro; o aviso padrao sera adicionado pelo aplicativo.',
               'Nao faca previsoes de mercado e nao diga qual ativo e melhor.',
               'Nao invente datas, setores, proventos, rentabilidade ou cotacoes ausentes.',
-              'Diferencie meta de renda mensal de renda mensal estimada. Meta nao e renda gerada.',
+              'Use o termo "renda mensal cadastrada", nunca "renda mensal estimada".',
+              'Diferencie meta de renda mensal de renda mensal cadastrada. Meta nao e renda gerada.',
               'Explique concentracao, renda, diferenca entre valor investido e valor atual, e pontos de atencao.',
               'Se houver poucos ativos, diga apenas que a carteira esta concentrada nos ativos cadastrados.',
+              'Use "carteira concentrada nos ativos cadastrados" em vez de "carteira nao diversificada".',
+              'Se a renda cadastrada for zero, diga "nao ha renda mensal cadastrada"; nao atribua causa a dividendos ou renda fixa.',
+              'Prefira "campos incompletos" a conclusoes fortes sobre risco.',
               'Use portugues do Brasil, linguagem clara, tom profissional e educativo.',
               'Nao use Markdown, negrito, asteriscos, numeracao decorativa ou titulos com simbolos.',
               'Responda somente em JSON valido no formato:',
@@ -150,6 +154,12 @@ function limparLinguagem(texto) {
   return texto
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
+    .replace(/renda mensal estimada/gi, 'renda mensal cadastrada')
+    .replace(/a carteira não está diversificada/gi, 'a carteira está concentrada nos ativos cadastrados')
+    .replace(/a carteira nao esta diversificada/gi, 'a carteira esta concentrada nos ativos cadastrados')
+    .replace(/devido à ausência de dividendos/gi, 'porque não há renda mensal cadastrada')
+    .replace(/devido a ausência de dividendos/gi, 'porque não há renda mensal cadastrada')
+    .replace(/devido a ausencia de dividendos/gi, 'porque nao ha renda mensal cadastrada')
     .replace(/é recomendável/gi, 'pode ser analisado')
     .replace(/recomenda-se/gi, 'pode ser analisado')
     .replace(/você deve/gi, 'voce pode avaliar')
