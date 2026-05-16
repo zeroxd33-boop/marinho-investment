@@ -30,6 +30,27 @@ module.exports = async function handler(req, res) {
       cotacao_atual: Number(item.cotacao_atual) || Number(item.preco_medio) || 0,
       dividendo_mensal: Number(item.dividendo_mensal) || 0
     }));
+    const totais = resumo.reduce((acc, item) => {
+      const quantidade = Number(item.quantidade) || 0;
+      const precoMedio = Number(item.preco_medio) || 0;
+      const cotacaoAtual = Number(item.cotacao_atual) || precoMedio;
+      const investido = quantidade * precoMedio;
+      const atual = quantidade * cotacaoAtual;
+
+      acc.valor_investido += investido;
+      acc.valor_atual += atual;
+      acc.renda_mensal_estimada += Number(item.dividendo_mensal) || 0;
+      acc.por_tipo[item.tipo || 'nao_informado'] = (acc.por_tipo[item.tipo || 'nao_informado'] || 0) + atual;
+      acc.por_setor[item.setor || 'Nao informado'] = (acc.por_setor[item.setor || 'Nao informado'] || 0) + atual;
+      return acc;
+    }, {
+      valor_investido: 0,
+      valor_atual: 0,
+      renda_mensal_estimada: 0,
+      por_tipo: {},
+      por_setor: {}
+    });
+    totais.resultado = totais.valor_atual - totais.valor_investido;
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -48,8 +69,12 @@ module.exports = async function handler(req, res) {
               'Voce e o Assistente de Carteira do Marinho Investment.',
               'Analise somente os dados fornecidos pelo aplicativo.',
               'Nao recomende compra, venda, manutencao ou troca de ativos.',
+              'Nao use frases normativas como "idealmente", "e recomendavel", "voce deve" ou "melhor ativo".',
               'Nao faca previsoes de mercado e nao diga qual ativo e melhor.',
+              'Nao invente datas, setores, proventos, rentabilidade ou cotacoes ausentes.',
+              'Diferencie meta de renda mensal de renda mensal estimada. Meta nao e renda gerada.',
               'Explique concentracao, diversificacao, renda, diferenca entre valor investido e valor atual, e pontos de atencao.',
+              'Se houver poucos ativos, diga apenas que a carteira esta concentrada nos ativos cadastrados.',
               'Use portugues do Brasil, linguagem clara, tom profissional e educativo.',
               'Finalize com um aviso curto: isto e uma analise informativa, nao recomendacao de investimento.'
             ].join(' ')
@@ -58,6 +83,7 @@ module.exports = async function handler(req, res) {
             role: 'user',
             content: JSON.stringify({
               meta_renda_mensal: metaRenda,
+              totais_calculados_pelo_app: totais,
               carteira: resumo
             })
           }
