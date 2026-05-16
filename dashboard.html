@@ -687,7 +687,7 @@ async function analisarComIA() {
     if (res.status === 404) throw new Error('rota_assistente_nao_encontrada');
     if (!res.ok) throw new Error(json?.message || json?.error || 'falha_assistente');
 
-    resposta.textContent = json.texto || 'Não recebi uma análise da IA. Tente novamente.';
+    resposta.textContent = limparTextoIA(json.texto || 'Não recebi uma análise da IA. Tente novamente.');
     showMsg(msg, 'Análise gerada com sucesso.', 'success');
   } catch (err) {
     const texto = err.message === 'groq_key_necessaria'
@@ -704,6 +704,14 @@ async function analisarComIA() {
 
 function dots(val, max) {
   return Array.from({length: max}, (_, i) => `<div class="dot ${i < val ? 'filled' : ''}"></div>`).join('');
+}
+
+function limparTextoIA(texto = '') {
+  return String(texto)
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/#{1,6}\s?/g, '')
+    .trim();
 }
 
 // ── CICLOS ───────────────────────────────────────
