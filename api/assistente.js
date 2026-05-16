@@ -135,7 +135,7 @@ function formatarAnalise(analise) {
     ['Pontos de atenção', analise.pontos_atencao]
   ];
 
-  return secoes
+  const texto = secoes
     .map(([titulo, itens]) => {
       const lista = normalizarLista(itens);
       if (!lista.length) return '';
@@ -143,6 +143,8 @@ function formatarAnalise(analise) {
     })
     .filter(Boolean)
     .join('\n\n') + '\n\nAviso: análise informativa, não recomendação de investimento.';
+
+  return limparLinguagem(texto);
 }
 
 function normalizarLista(valor) {
@@ -154,9 +156,14 @@ function limparLinguagem(texto) {
   return texto
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
-    .replace(/renda mensal estimada/gi, 'renda mensal cadastrada')
+    .replace(/renda mensal estimad[ao]s?/gi, 'renda mensal cadastrada')
+    .replace(/nenhuma renda gerada/gi, 'não há renda mensal cadastrada')
+    .replace(/nenhuma renda mensal gerada/gi, 'não há renda mensal cadastrada')
+    .replace(/sem renda gerada/gi, 'sem renda mensal cadastrada')
     .replace(/a carteira não está diversificada/gi, 'a carteira está concentrada nos ativos cadastrados')
     .replace(/a carteira nao esta diversificada/gi, 'a carteira esta concentrada nos ativos cadastrados')
+    .replace(/carteira não está diversificada/gi, 'carteira concentrada nos ativos cadastrados')
+    .replace(/carteira nao esta diversificada/gi, 'carteira concentrada nos ativos cadastrados')
     .replace(/devido à ausência de dividendos/gi, 'porque não há renda mensal cadastrada')
     .replace(/devido a ausência de dividendos/gi, 'porque não há renda mensal cadastrada')
     .replace(/devido a ausencia de dividendos/gi, 'porque nao ha renda mensal cadastrada')
