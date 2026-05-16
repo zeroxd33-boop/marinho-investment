@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS public.carteira (
   dividendo_mensal NUMERIC NOT NULL DEFAULT 0 CHECK (dividendo_mensal >= 0),
   setor TEXT DEFAULT 'Outros',
   tipo TEXT NOT NULL DEFAULT 'acao' CHECK (tipo IN ('acao', 'fii', 'renda_fixa')),
+  mercado TEXT NOT NULL DEFAULT 'brasil' CHECK (mercado IN ('brasil', 'eua', 'outro')),
+  moeda TEXT NOT NULL DEFAULT 'BRL' CHECK (moeda IN ('BRL', 'USD', 'EUR', 'OUTRA')),
+  corretora TEXT,
   nota_buffett INTEGER NOT NULL DEFAULT 0 CHECK (nota_buffett >= 0 AND nota_buffett <= 10),
   fallen_angel BOOLEAN NOT NULL DEFAULT FALSE,
   ciclo_entrada TEXT NOT NULL DEFAULT 'recuperacao' CHECK (ciclo_entrada IN ('expansao', 'pico', 'crise', 'recuperacao')),
@@ -44,13 +47,36 @@ CREATE TABLE IF NOT EXISTS public.carteira (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.proventos (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  usuario_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE NOT NULL,
+  carteira_id UUID REFERENCES public.carteira(id) ON DELETE SET NULL,
+  ticker TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'dividendo' CHECK (tipo IN ('dividendo', 'jcp', 'rendimento_fii', 'cupom', 'rendimento', 'outro')),
+  valor NUMERIC NOT NULL DEFAULT 0 CHECK (valor >= 0),
+  moeda TEXT NOT NULL DEFAULT 'BRL' CHECK (moeda IN ('BRL', 'USD', 'EUR', 'OUTRA')),
+  data_pagamento DATE NOT NULL DEFAULT CURRENT_DATE,
+  competencia TEXT,
+  observacao TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_carteira_usuario_id ON public.carteira(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_proventos_usuario_id ON public.proventos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_proventos_data_pagamento ON public.proventos(data_pagamento);
 CREATE INDEX IF NOT EXISTS idx_usuarios_status ON public.usuarios(status);
 CREATE INDEX IF NOT EXISTS idx_usuarios_plano ON public.usuarios(plano);
 
 -- Atualizacao para bases existentes: adiciona cotacao atual sem recriar a tabela.
 ALTER TABLE public.carteira
   ADD COLUMN IF NOT EXISTS cotacao_atual NUMERIC NOT NULL DEFAULT 0 CHECK (cotacao_atual >= 0);
+ALTER TABLE public.carteira
+  ADD COLUMN IF NOT EXISTS mercado TEXT NOT NULL DEFAULT 'brasil' CHECK (mercado IN ('brasil', 'eua', 'outro'));
+ALTER TABLE public.carteira
+  ADD COLUMN IF NOT EXISTS moeda TEXT NOT NULL DEFAULT 'BRL' CHECK (moeda IN ('BRL', 'USD', 'EUR', 'OUTRA'));
+ALTER TABLE public.carteira
+  ADD COLUMN IF NOT EXISTS corretora TEXT;
 
 -- ============================================================
 -- 2. Helpers seguros
@@ -102,12 +128,18 @@ CREATE TRIGGER touch_carteira_updated_at
   BEFORE UPDATE ON public.carteira
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
+DROP TRIGGER IF EXISTS touch_proventos_updated_at ON public.proventos;
+CREATE TRIGGER touch_proventos_updated_at
+  BEFORE UPDATE ON public.proventos
+  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+
 -- ============================================================
 -- 3. RLS
 -- ============================================================
 
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.carteira ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.proventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
 -- Recria politicas para permitir rerodar o script sem conflito
@@ -125,6 +157,10 @@ DROP POLICY IF EXISTS carteira_select_active_owner_or_admin ON public.carteira;
 DROP POLICY IF EXISTS carteira_insert_active_owner ON public.carteira;
 DROP POLICY IF EXISTS carteira_update_active_owner ON public.carteira;
 DROP POLICY IF EXISTS carteira_delete_active_owner ON public.carteira;
+DROP POLICY IF EXISTS proventos_select_active_owner_or_admin ON public.proventos;
+DROP POLICY IF EXISTS proventos_insert_active_owner ON public.proventos;
+DROP POLICY IF EXISTS proventos_update_active_owner ON public.proventos;
+DROP POLICY IF EXISTS proventos_delete_active_owner ON public.proventos;
 DROP POLICY IF EXISTS admins_select_self ON public.admins;
 
 -- Usuarios: o usuario enxerga o proprio perfil; admin enxerga todos.
@@ -163,6 +199,27 @@ CREATE POLICY carteira_delete_active_owner ON public.carteira
   TO authenticated
   USING (auth.uid() = usuario_id AND public.is_active_user(auth.uid()));
 
+CREATE POLICY proventos_select_active_owner_or_admin ON public.proventos
+  FOR SELECT
+  TO authenticated
+  USING ((auth.uid() = usuario_id AND public.is_active_user(auth.uid())) OR public.is_admin());
+
+CREATE POLICY proventos_insert_active_owner ON public.proventos
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = usuario_id AND public.is_active_user(auth.uid()));
+
+CREATE POLICY proventos_update_active_owner ON public.proventos
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = usuario_id AND public.is_active_user(auth.uid()))
+  WITH CHECK (auth.uid() = usuario_id AND public.is_active_user(auth.uid()));
+
+CREATE POLICY proventos_delete_active_owner ON public.proventos
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() = usuario_id AND public.is_active_user(auth.uid()));
+
 -- Admins: cada admin consegue confirmar apenas a propria linha.
 CREATE POLICY admins_select_self ON public.admins
   FOR SELECT
@@ -176,6 +233,7 @@ CREATE POLICY admins_select_self ON public.admins
 REVOKE ALL ON public.admins FROM anon, authenticated;
 REVOKE ALL ON public.usuarios FROM anon, authenticated;
 REVOKE ALL ON public.carteira FROM anon, authenticated;
+REVOKE ALL ON public.proventos FROM anon, authenticated;
 
 GRANT SELECT ON public.admins TO authenticated;
 
@@ -183,6 +241,7 @@ GRANT SELECT ON public.usuarios TO authenticated;
 GRANT UPDATE (nome, meta_renda) ON public.usuarios TO authenticated;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.carteira TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.proventos TO authenticated;
 
 -- ============================================================
 -- 5. Funcoes admin
