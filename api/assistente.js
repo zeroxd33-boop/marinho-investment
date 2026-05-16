@@ -78,6 +78,7 @@ module.exports = async function handler(req, res) {
               'Explique concentracao, renda, diferenca entre valor investido e valor atual, e pontos de atencao.',
               'Se houver poucos ativos, diga apenas que a carteira esta concentrada nos ativos cadastrados.',
               'Use portugues do Brasil, linguagem clara, tom profissional e educativo.',
+              'Nao use Markdown, negrito, asteriscos, numeracao decorativa ou titulos com simbolos.',
               'Responda somente em JSON valido no formato:',
               '{"resumo":"texto curto","metricas":["item"],"concentracao":["item"],"renda":["item"],"valor_atual":["item"],"pontos_atencao":["item"]}',
               'Cada item deve ter no maximo 160 caracteres.'
