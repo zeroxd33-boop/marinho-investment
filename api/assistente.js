@@ -62,6 +62,7 @@ module.exports = async function handler(req, res) {
         model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
         temperature: 0.3,
         max_completion_tokens: 900,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
@@ -70,13 +71,16 @@ module.exports = async function handler(req, res) {
               'Analise somente os dados fornecidos pelo aplicativo.',
               'Nao recomende compra, venda, manutencao ou troca de ativos.',
               'Nao use frases normativas como "idealmente", "e recomendavel", "voce deve" ou "melhor ativo".',
+              'Nao mande o usuario consultar profissional financeiro; o aviso padrao sera adicionado pelo aplicativo.',
               'Nao faca previsoes de mercado e nao diga qual ativo e melhor.',
               'Nao invente datas, setores, proventos, rentabilidade ou cotacoes ausentes.',
               'Diferencie meta de renda mensal de renda mensal estimada. Meta nao e renda gerada.',
-              'Explique concentracao, diversificacao, renda, diferenca entre valor investido e valor atual, e pontos de atencao.',
+              'Explique concentracao, renda, diferenca entre valor investido e valor atual, e pontos de atencao.',
               'Se houver poucos ativos, diga apenas que a carteira esta concentrada nos ativos cadastrados.',
               'Use portugues do Brasil, linguagem clara, tom profissional e educativo.',
-              'Finalize com um aviso curto: isto e uma analise informativa, nao recomendacao de investimento.'
+              'Responda somente em JSON valido no formato:',
+              '{"resumo":"texto curto","metricas":["item"],"concentracao":["item"],"renda":["item"],"valor_atual":["item"],"pontos_atencao":["item"]}',
+              'Cada item deve ter no maximo 160 caracteres.'
             ].join(' ')
           },
           {
@@ -102,8 +106,12 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const texto = data?.choices?.[0]?.message?.content || '';
-    return res.status(200).json({ texto });
+    const content = data?.choices?.[0]?.message?.content || '{}';
+    const analise = JSON.parse(content);
+    return res.status(200).json({
+      texto: formatarAnalise(analise),
+      analise
+    });
   } catch (error) {
     return res.status(500).json({
       error: 'falha_assistente',
@@ -111,6 +119,42 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
+function formatarAnalise(analise) {
+  const secoes = [
+    ['Resumo', [analise.resumo]],
+    ['Métricas', analise.metricas],
+    ['Concentração', analise.concentracao],
+    ['Renda', analise.renda],
+    ['Valor atual', analise.valor_atual],
+    ['Pontos de atenção', analise.pontos_atencao]
+  ];
+
+  return secoes
+    .map(([titulo, itens]) => {
+      const lista = normalizarLista(itens);
+      if (!lista.length) return '';
+      return `${titulo}\n${lista.map(item => `- ${limparLinguagem(item)}`).join('\n')}`;
+    })
+    .filter(Boolean)
+    .join('\n\n') + '\n\nAviso: análise informativa, não recomendação de investimento.';
+}
+
+function normalizarLista(valor) {
+  if (!valor) return [];
+  return (Array.isArray(valor) ? valor : [valor]).filter(Boolean).map(String);
+}
+
+function limparLinguagem(texto) {
+  return texto
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/é recomendável/gi, 'pode ser analisado')
+    .replace(/recomenda-se/gi, 'pode ser analisado')
+    .replace(/você deve/gi, 'voce pode avaliar')
+    .replace(/idealmente/gi, 'em uma leitura de diversificacao')
+    .trim();
+}
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
