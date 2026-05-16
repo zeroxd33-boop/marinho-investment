@@ -191,6 +191,9 @@
   <div class="nav-item" onclick="showPage('carteira')">
     <span class="nav-icon">▤</span><span>Carteira</span>
   </div>
+  <div class="nav-item" onclick="showPage('proventos')">
+    <span class="nav-icon">$</span><span>Proventos</span>
+  </div>
   <div class="nav-item" onclick="showPage('analise')">
     <span class="nav-icon">◈</span><span>Análise</span>
   </div>
@@ -258,6 +261,13 @@
         <div class="form-group"><label>Cotação atual</label><input id="f-cotacao" type="number" placeholder="0.00" step="0.01"></div>
         <div class="form-group"><label>Dividendo/mês</label><input id="f-div" type="number" placeholder="0.00" step="0.01"></div>
         <div class="form-group"><label>Setor</label><input id="f-setor" placeholder="ex: Energia"></div>
+        <div class="form-group"><label>Mercado</label>
+          <select id="f-mercado" onchange="ajustarMoedaPorMercado()"><option value="brasil">Brasil</option><option value="eua">EUA</option><option value="outro">Outro</option></select>
+        </div>
+        <div class="form-group"><label>Moeda</label>
+          <select id="f-moeda"><option value="BRL">BRL</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="OUTRA">Outra</option></select>
+        </div>
+        <div class="form-group"><label>Corretora</label><input id="f-corretora" placeholder="ex: XP, Avenue"></div>
       </div>
       <div id="ativo-preview" class="asset-preview"></div>
       <div id="msg-carteira" class="msg"></div>
@@ -269,8 +279,47 @@
     <div class="card" style="margin-top:1rem;">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Ticker</th><th>Tipo</th><th>Qtd</th><th>P. Médio</th><th>Cotação</th><th>Investido</th><th>Atual</th><th>Resultado</th><th>Div/mês</th><th>Setor</th><th></th></tr></thead>
-          <tbody id="tb-carteira"><tr><td colspan="11" style="color:var(--muted);text-align:center;padding:2rem;">Carregando...</td></tr></tbody>
+          <thead><tr><th>Ticker</th><th>Tipo</th><th>Mercado</th><th>Moeda</th><th>Qtd</th><th>P. Médio</th><th>Cotação</th><th>Investido</th><th>Atual</th><th>Resultado</th><th>Div/mês</th><th>Setor</th><th>Corretora</th><th></th></tr></thead>
+          <tbody id="tb-carteira"><tr><td colspan="14" style="color:var(--muted);text-align:center;padding:2rem;">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROVENTOS -->
+  <div class="page" id="page-proventos">
+    <div class="page-header">
+      <h2>Proventos</h2>
+      <p>Registre dividendos, JCP, rendimentos e pagamentos no Brasil ou exterior</p>
+    </div>
+    <div class="card">
+      <div class="card-label" style="margin-bottom:1rem;">Adicionar provento</div>
+      <div class="form-inline">
+        <div class="form-group"><label>Ativo</label><select id="p-ativo"></select></div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="p-tipo"><option value="dividendo">Dividendo</option><option value="jcp">JCP</option><option value="rendimento_fii">Rendimento FII</option><option value="cupom">Cupom</option><option value="rendimento">Rendimento</option><option value="outro">Outro</option></select>
+        </div>
+        <div class="form-group"><label>Valor</label><input id="p-valor" type="number" placeholder="0.00" step="0.01"></div>
+        <div class="form-group"><label>Moeda</label>
+          <select id="p-moeda"><option value="BRL">BRL</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="OUTRA">Outra</option></select>
+        </div>
+        <div class="form-group"><label>Data pagamento</label><input id="p-data" type="date"></div>
+        <div class="form-group"><label>Competência</label><input id="p-competencia" placeholder="ex: 2026-05"></div>
+        <div class="form-group"><label>Observação</label><input id="p-obs" placeholder="opcional"></div>
+      </div>
+      <div id="msg-proventos" class="msg"></div>
+      <button class="btn" onclick="addProvento()">+ Registrar provento</button>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <div class="grid g3">
+        <div><div class="card-label">Proventos do mês</div><div class="card-value gold" id="p-total-mes">R$ 0</div></div>
+        <div><div class="card-label">Registros</div><div class="card-value" id="p-registros">0</div></div>
+        <div><div class="card-label">Moedas</div><div class="card-value" id="p-moedas">BRL</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Ticker</th><th>Tipo</th><th>Valor</th><th>Competência</th><th>Obs.</th><th></th></tr></thead>
+          <tbody id="tb-proventos"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">Nenhum provento cadastrado.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -413,7 +462,7 @@ if (SUPABASE_URL && SUPABASE_ANON && window.supabase) {
     : 'Biblioteca do Supabase não carregou. Verifique sua conexão com a internet ou se o CDN jsDelivr está bloqueado.'
   );
 }
-let USER = null, CARTEIRA = [], CICLO_ATUAL = 'recuperacao';
+let USER = null, CARTEIRA = [], PROVENTOS = [], CICLO_ATUAL = 'recuperacao';
 let ATIVO_BUSCADO = null;
 
 // ── INIT ─────────────────────────────────────────
@@ -431,6 +480,7 @@ let ATIVO_BUSCADO = null;
   document.getElementById('nova-meta').value = u.meta_renda || 500;
 
   await loadCarteira();
+  await loadProventos();
   renderMeta();
   renderAnalise();
   renderCiclos();
@@ -441,6 +491,7 @@ async function loadCarteira() {
   const { data } = await sb.from('carteira').select('*').eq('usuario_id', USER.uid).order('created_at');
   CARTEIRA = data || [];
   renderTabela();
+  renderSelectProventos();
 }
 
 function renderTabela() {
